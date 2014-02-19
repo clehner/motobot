@@ -1,0 +1,12 @@
+{
+	"name": "ircbot",
+	"version": "0.0.1",
+	"repo": "clehner/ircbot",
+	"description": "IRC Conversation bot",
+	"keywords": ["irc", "chat", "bot", "markov"],
+	"license": "MIT",
+	"dependencies": {
+		"clibs/inih": "*"
+	},
+	"src": ["src/bot.c"]
+}
