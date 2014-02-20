@@ -2,48 +2,42 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include "inih/ini.h"
-#include "libircclient/libircclient.h"
-#include "libircclient/libirc_rfcnumeric.h"
+#include "bot.h"
+#include "module.h"
 
-typedef struct {
-} configuration_t;
+void
+bot_module_foreach(bot_t *bot);
 
-static int config_handler(void* user, const char* section, const char* name,
-    const char* value)
-{
-    printf("[%s] %s = %s\n", section, name, value);
-    /*
-    configuration_t* pconfig = (configuration_t*)user;
-
-    #define MATCH(s, n) strcmp(section, s) == 0 && strcmp(name, n) == 0
-    if (MATCH("protocol", "version")) {
-        pconfig->version = atoi(value);
-    } else if (MATCH("user", "name")) {
-        pconfig->name = strdup(value);
-    } else if (MATCH("user", "email")) {
-        pconfig->email = strdup(value);
-    } else {
-        return 0;  // unknown section/name, error
-    }
-*/
-    return 1;
+void
+bot_add_module(bot_t *bot, module_t* module) {
+	module->next = bot->modules;
+	bot->modules = module;
 }
 
 int
-main(int argc, char *argv[]) {
-    configuration_t config;
-
-    if (argc != 2) {
-        fprintf(stderr, "Usage: %s config.ini\n", argv[0]);
-        return 1;
-    }
-
-    if (ini_parse(argv[1], config_handler, &config) < 0) {
-        fprintf(stderr, "Can't load '%s'\n", argv[1]);
-        return 1;
-    }
-
-    return 0;
+bot_connect(bot_t *bot) {
+	for (module_t *module = bot->modules; module; module = module->next) {
+		if (module->connect)
+			(*module->connect)(module);
+	}
+	return 1;
 }
 
+int
+bot_add_select_descriptors(bot_t *bot, fd_set *in_set, fd_set *out_set,
+		int *maxfd) {
+	for (module_t *module = bot->modules; module; module = module->next) {
+		if (module->add_select_descriptors)
+			(*module->add_select_descriptors)(module, in_set, out_set, maxfd);
+	}
+	return 1;
+}
+
+int
+bot_process_select_descriptors(bot_t *bot, fd_set *in_set, fd_set *out_set) {
+	for (module_t *module = bot->modules; module; module = module->next) {
+		if (module->process_select_descriptors)
+			(*module->process_select_descriptors)(module, in_set, out_set);
+	}
+	return 1;
+}
