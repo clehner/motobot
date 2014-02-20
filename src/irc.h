@@ -31,17 +31,4 @@ struct irc {
 irc_t *
 irc_new();
 
-int
-irc_config(module_t *module, const char *name, const char *value);
-
-int
-irc_module_connect(module_t *irc);
-
-int
-irc_module_add_select_descriptors(module_t *irc, fd_set *in_set, fd_set *out_set,
-		int *maxfd);
-
-int
-irc_module_process_select_descriptors(module_t *irc, fd_set *in_set, fd_set *out_set);
-
 #endif /* IRC_H */

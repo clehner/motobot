@@ -16,7 +16,7 @@ char *my_strdup(const char *s) {
 char *my_strdup(const char *s);
 #define strdup(x) my_strdup(x)
 
-void
+static void
 event_connect(irc_session_t * session, const char * event, const char * origin, const char ** params, unsigned int count) {
 	(void) session;
 	(void) params;
@@ -27,54 +27,35 @@ event_connect(irc_session_t * session, const char * event, const char * origin, 
 	printf("Connected!\n");
 }
 
-void
+static void
 event_numeric(irc_session_t * session, unsigned int event, const char * origin, const char ** params, unsigned int count) {
 	(void) session;
 	(void) params;
 	(void) count;
-	printf("Got event %u (%s)\n", event, origin);
+	switch(event) {
+		case 464:
+			fprintf(stderr, "[%s] Bad password\n", origin);
+			break;
+		case LIBIRC_RFC_RPL_MOTD:
+			if (count > 1) {
+				printf("[%s] MOTD: %s\n", origin, params[1]);
+			}
+		case LIBIRC_RFC_RPL_MOTDSTART:
+		case LIBIRC_RFC_RPL_ENDOFMOTD:
+			break;
+		case LIBIRC_RFC_RPL_NAMREPLY:
+			if (count > 1) {
+				printf("[%s] NAMREPLY: %s\n", origin, params[1]);
+			}
+		case LIBIRC_RFC_RPL_ENDOFNAMES:
+			break;
+		default:
+			printf("Got event %u (%s)\n", event, origin);
+	}
 }
 
-
-irc_t *
-irc_new() {
-	irc_t *irc = calloc(1, sizeof(irc_t));
-	// irc_t *irc = malloc(sizeof(irc_t));
-	// memset(irc, 0, sizeof(irc_t));
-	if (!irc) {
-		perror("calloc");
-		return NULL;
-	}
-
-	irc->module.type = "irc";
-	irc->module.connect = irc_module_connect;
-	irc->module.config = irc_config;
-	irc->module.process_select_descriptors =
-		irc_module_process_select_descriptors;
-	irc->module.add_select_descriptors = irc_module_add_select_descriptors;
-
-	irc->server = "";
-	irc->ssl = 0;
-	irc->ipv6 = 0;
-	irc->port = 6667;
-	irc->password = NULL;
-	irc->nick = "guest";
-	irc->username = "nobody";
-	irc->realname = "noname";
-
-	irc->callbacks.event_connect = event_connect;
-	irc->callbacks.event_numeric = event_numeric;
-
-	irc->session = irc_create_session(&irc->callbacks);
-	if (!irc->session) {
-		fprintf(stderr, "irc: %s\n", irc_strerror(irc_errno(irc->session)));
-	}
-
-	return irc;
-}
-
-int
-irc_config(module_t *module, const char *name, const char *value) {
+static int
+config(module_t *module, const char *name, const char *value) {
 	irc_t *irc = (irc_t *)module;
 
 	if (strcmp(name, "server") == 0) {
@@ -120,8 +101,8 @@ irc_config(module_t *module, const char *name, const char *value) {
 	return 1;
 }
 
-int
-irc_module_connect(module_t *module) {
+static int
+module_connect(module_t *module) {
 	irc_t *irc = (irc_t *)module;
 	printf("Connecting to server: %s, port: %u\n",
 		&irc->server[irc->ssl ? 0 : 1],
@@ -140,17 +121,51 @@ irc_module_connect(module_t *module) {
 	return 1;
 }
 
-int
-irc_module_add_select_descriptors(module_t *module, fd_set *in_set,
-		fd_set *out_set, int *maxfd) {
+static int
+add_select(module_t *module, fd_set *in_set, fd_set *out_set, int *maxfd) {
 	irc_t *irc = (irc_t *)module;
 	return irc_add_select_descriptors(irc->session, in_set, out_set, maxfd);
 }
 
-int
-irc_module_process_select_descriptors(module_t *module, fd_set *in_set,
-		fd_set *out_set) {
+static int
+process_select(module_t *module, fd_set *in_set, fd_set *out_set) {
 	irc_t *irc = (irc_t *)module;
 	return irc_process_select_descriptors(irc->session, in_set, out_set);
+}
+
+irc_t *
+irc_new() {
+	irc_t *irc = calloc(1, sizeof(irc_t));
+	// irc_t *irc = malloc(sizeof(irc_t));
+	// memset(irc, 0, sizeof(irc_t));
+	if (!irc) {
+		perror("calloc");
+		return NULL;
+	}
+
+	irc->module.type = "irc";
+	irc->module.connect = module_connect;
+	irc->module.config = config;
+	irc->module.process_select_descriptors = process_select;
+	irc->module.add_select_descriptors = add_select;
+
+	irc->server = "";
+	irc->ssl = 0;
+	irc->ipv6 = 0;
+	irc->port = 6667;
+	irc->password = NULL;
+	irc->nick = "guest";
+	irc->username = "nobody";
+	irc->realname = "noname";
+
+	irc->callbacks.event_connect = event_connect;
+	irc->callbacks.event_numeric = event_numeric;
+
+	irc->session = irc_create_session(&irc->callbacks);
+	if (!irc->session) {
+		fprintf(stderr, "irc: %s\n", irc_strerror(irc_errno(irc->session)));
+	}
+
+	return irc;
 }
 

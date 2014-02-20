@@ -41,6 +41,9 @@ bot_config_handler(void* obj, const char* section, const char* name,
 
 int
 main(int argc, char *argv[]) {
+	struct timeval tv;
+	fd_set in_set, out_set;
+	int maxfd = 0;
 
 	// bot_module_add(irc);
 
@@ -58,21 +61,16 @@ main(int argc, char *argv[]) {
 	// Start connecting stuff
 	bot_connect(&bot);
 
-	// Create the structures for select()
-	struct timeval tv;
-	fd_set in_set, out_set;
-	int maxfd = 0;
-
-	// Wait 0.25 sec for the events - you can wait longer if you want to, but the library has internal timeouts
-	// so it needs to be called periodically even if there are no network events
-	tv.tv_usec = 250000;
-	tv.tv_sec = 0;
-
 	while (1) {
 
 		// Initialize the sets
 		FD_ZERO (&in_set);
 		FD_ZERO (&out_set);
+
+		// Wait 1 sec for the events.
+		// ircclient has internal timeouts.
+		tv.tv_usec = 0;
+		tv.tv_sec = 1;
 
 		bot_add_select_descriptors(&bot, &in_set, &out_set, &maxfd);
 
