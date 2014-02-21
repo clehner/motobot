@@ -1,6 +1,6 @@
 PREFIX ?= /usr/local
 BINDIR  = $(PREFIX)/bin
-BIN     = ircbot
+BIN     = motobot
 CC     ?= cc
 SRC     = $(wildcard src/*.c)
 SRC    += $(wildcard deps/*/*.c)

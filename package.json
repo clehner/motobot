@@ -1,7 +1,7 @@
 {
-	"name": "ircbot",
-	"version": "0.0.1",
-	"repo": "clehner/ircbot",
+	"name": "motobot",
+	"version": "0.1.0",
+	"repo": "clehner/motobot",
 	"description": "IRC Conversation bot",
 	"keywords": ["irc", "chat", "bot", "markov"],
 	"license": "MIT",
