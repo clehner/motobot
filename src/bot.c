@@ -64,3 +64,27 @@ bot_on_msg(bot_t *bot, module_t *from_module, const char *channel,
 			(*module->on_msg)(module, from_module, channel, sender, message);
 	}
 }
+
+void
+bot_on_read_log(bot_t *bot, const char *sender, const char *message) {
+	for (module_t *module = bot->modules; module; module = module->next) {
+		if (module->on_read_log)
+			(*module->on_read_log)(module, sender, message);
+	}
+}
+
+void
+bot_send(bot_t *bot, module_t *from_module, module_t *to_module,
+		const char *channel, const char *message) {
+	for (module_t *module = bot->modules; module; module = module->next) {
+		if (module == from_module) {
+		} else if (module == to_module) {
+			if (module->send)
+				(*module->send)(module, channel, message);
+		} else if (module->on_msg) {
+			if (module->on_msg)
+				(*module->on_msg)(module, from_module, channel,
+						to_module->name, message);
+		}
+	}
+}

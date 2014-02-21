@@ -12,11 +12,12 @@ typedef struct module module_t;
 
 struct module {
 	const char *type;
+	const char *name;
 	module_t *next;
 	struct bot *bot;
 
 	// Methods
-	int (*config) (module_t *module, const char *name, const char *value);
+	void (*config) (module_t *module, const char *name, const char *value);
 	int (*connect) (module_t *module);
 	int (*process_select_descriptors) (module_t *module, fd_set *in_set, fd_set *out_set);
 	int (*add_select_descriptors) (module_t *module, fd_set *in_set, fd_set *out_set, int *maxfd);
@@ -25,13 +26,12 @@ struct module {
 	// Callbacks
 	void (*on_msg) (module_t *module, module_t *from_module, const char *channel,
 		const char *sender, const char *message);
+	void (*on_read_log) (module_t *module,
+		const char *sender, const char *message);
 };
 
 module_t *
 module_new(const char *module_type);
-
-void
-module_config(module_t *module, const char *name, const char *value);
 
 /*
 int module_config (module_t *module, const char *name, const char *value);

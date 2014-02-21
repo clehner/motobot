@@ -13,7 +13,9 @@
 #include "bot.h"
 #include "irc.h"
 
-#define debug 0
+#define debug 1
+
+typedef struct irc irc_t;
 
 struct irc {
 	module_t module;
@@ -158,7 +160,21 @@ event_channel(irc_session_t *session, const char *event, const char *origin,
 
 	irc_t *irc = get_module(session);
 	bot_on_msg(irc->module.bot, &irc->module, channel, origin, message);
+}
 
+static void
+event_privmsg(irc_session_t *session, const char *event, const char *origin,
+		const char **params, unsigned int count) {
+	// const char *my_nick = params[0];
+	const char *message = params[1];
+	if (debug) {
+		printf("[%s] %s\n", origin, message);
+	}
+
+	if (message) {
+		irc_t *irc = get_module(session);
+		bot_on_msg(irc->module.bot, &irc->module, NULL, origin, message);
+	}
 }
 
 static void
@@ -186,13 +202,14 @@ event_nick(irc_session_t *session, const char *event, const char *old_nick,
 			free(irc->current_nick);
 		}
 		irc->current_nick = strdup(new_nick);
+		irc->module.name = irc->current_nick;
 		if (debug) {
 			printf("Nick changed: %s\n", new_nick);
 		}
 	}
 }
 
-static int
+static void
 config(module_t *module, const char *name, const char *value) {
 	irc_t *irc = (irc_t *)module;
 
@@ -244,7 +261,6 @@ config(module_t *module, const char *name, const char *value) {
 		channel->next = irc->channels;
 		irc->channels = channel;
 	}
-	return 1;
 }
 
 static int
@@ -286,7 +302,10 @@ send(module_t *module, const char *channel, const char *message) {
 	irc_t *irc = (irc_t *)module;
 	if (irc_cmd_msg(irc->session, channel, message)) {
 		fprintf(stderr, "irc: %s\n", irc_strerror(irc_errno(irc->session)));
+		return;
 	}
+
+	bot_on_read_log(module->bot, irc->current_nick, message);
 }
 
 // Callbacks for IRC client
@@ -294,11 +313,12 @@ irc_callbacks_t callbacks = {
 	.event_connect = event_connect,
 	.event_numeric = event_numeric,
 	.event_channel = event_channel,
+	.event_privmsg = event_privmsg,
 	.event_nick = event_nick,
 	.event_ctcp_action = event_ctcp_action
 };
 
-irc_t *
+module_t *
 irc_new() {
 	irc_t *irc = calloc(1, sizeof(irc_t));
 
@@ -308,6 +328,7 @@ irc_new() {
 	}
 
 	irc->module.type = "irc";
+	irc->module.name = NULL;
 	irc->module.connect = module_connect;
 	irc->module.config = config;
 	irc->module.process_select_descriptors = process_select;
@@ -336,5 +357,5 @@ irc_new() {
 
 	// irc_is_connected(session)
 
-	return irc;
+	return (module_t *)irc;
 }

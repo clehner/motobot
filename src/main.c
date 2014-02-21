@@ -32,7 +32,8 @@ bot_config_handler(void* obj, const char* section, const char* name,
 	}
 
 	// Configure the module
-	module_config(module, name, value);
+	if (module->config)
+		(*module->config)(module, name, value);
 	return 1;
 }
 

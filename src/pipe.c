@@ -34,7 +34,14 @@ process_select(module_t *module, fd_set *in_set, fd_set *out_set) {
 			return 0;
 			*/
 		}
-		bot_on_msg(module->bot, module, NULL, NULL, bufin);
+
+		// trim
+		int len = strlen(bufin);
+		if (len > 0 && bufin[len-1] == '\n') {
+			bufin[len-1] = '\0';
+		}
+
+		bot_on_msg(module->bot, module, NULL, "(stdin)", bufin);
 	}
 	return 1;
 }
@@ -55,6 +62,7 @@ pipe_new() {
 	}
 
 	module->type = "pipe";
+	module->name = "(stdout)";
 	module->process_select_descriptors = process_select;
 	module->add_select_descriptors = add_select;
 	module->send = send;
