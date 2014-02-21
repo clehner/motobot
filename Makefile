@@ -6,7 +6,7 @@ SRC     = $(wildcard src/*.c)
 SRC    += $(wildcard deps/*/*.c)
 OBJ = $(SRC:.c=.o)
 CFLAGS  = -std=c99 -Ideps -Isrc
-CFLAGS += -Wall -Wextra
+CFLAGS += -Wall
 LDFLAGS = -lcurl -lircclient
 
 $(BIN): $(OBJ)

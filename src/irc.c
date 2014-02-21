@@ -77,7 +77,6 @@ print_array(const char *array[], int n) {
 static void
 event_connect(irc_session_t *session, const char *event, const char *origin,
 		const char **params, unsigned int count) {
-	(void) params, (void) event, (void) origin, (void) params, (void) count;
 	irc_t *irc = get_module(session);
 
 	if (debug)
@@ -95,9 +94,6 @@ event_connect(irc_session_t *session, const char *event, const char *origin,
 static void
 event_numeric(irc_session_t *session, unsigned int event, const char *origin,
 		const char **params, unsigned int count) {
-	(void) session;
-	(void) params;
-	(void) count;
 	switch(event) {
 		case 464:
 			fprintf(stderr, "[%s] Bad password\n", origin);
@@ -147,7 +143,6 @@ event_numeric(irc_session_t *session, unsigned int event, const char *origin,
 static void
 event_default(irc_session_t *session, const char *event, const char *origin,
 		const char **params, unsigned int count) {
-	(void) session;
 	printf("[%s] %s: ", origin, event);
 	print_array(params, count);
 }
@@ -155,9 +150,6 @@ event_default(irc_session_t *session, const char *event, const char *origin,
 static void
 event_channel(irc_session_t *session, const char *event, const char *origin,
 		const char **params, unsigned int count) {
-	(void) session;
-	(void) event;
-	(void) count;
 	const char *channel = params[0];
 	const char *message = params[1];
 	if (debug) {
@@ -172,9 +164,6 @@ event_channel(irc_session_t *session, const char *event, const char *origin,
 static void
 event_ctcp_action(irc_session_t *session, const char *event, const char *origin,
 		const char **params, unsigned int count) {
-	(void) session;
-	(void) event;
-	(void) count;
 	const char *channel = params[0];
 	const char *message = params[1];
 	if (debug) {
@@ -185,8 +174,6 @@ event_ctcp_action(irc_session_t *session, const char *event, const char *origin,
 static void
 event_nick(irc_session_t *session, const char *event, const char *old_nick,
 		const char **params, unsigned int count) {
-	(void) session;
-	(void) event;
 	const char *new_nick = params[0];
 	if (count < 1) {
 		return;
@@ -314,7 +301,6 @@ irc_callbacks_t callbacks = {
 irc_t *
 irc_new() {
 	irc_t *irc = calloc(1, sizeof(irc_t));
-	(void) event_default;
 
 	if (!irc) {
 		perror("calloc");

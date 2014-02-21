@@ -12,7 +12,6 @@ static int
 bot_config_handler(void* obj, const char* section, const char* name,
 		const char* value) {
 	module_t *module = bot.modules;
-	(void)obj;
 
 	if (!module || strcmp(section, bot.modules->type)) {
 		// Add new module of given type

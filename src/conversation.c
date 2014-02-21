@@ -13,7 +13,6 @@ struct conversation {
 static void
 on_msg(module_t *module, module_t *from_module, const char *channel,
 		const char *sender, const char *message) {
-	(void) sender;
 	conversation_t *conv = (conversation_t *)module;
 	char response[MAX_LINE_LENGTH];
 
