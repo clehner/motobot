@@ -74,11 +74,7 @@ static void
 on_msg(module_t *module, module_t *from_module, const char *channel,
 		const char *sender, const char *message) {
 	log_t *log = (log_t *)module;
-	// Only log messages in the channel
-	// printf("log on_msg [%s] %s: %s\n", channel, sender, message);
-	if (channel) {
-		log_message(log, sender, message);
-	}
+	log_message(log, sender, message);
 }
 
 static void

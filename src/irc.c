@@ -168,12 +168,12 @@ event_privmsg(irc_session_t *session, const char *event, const char *origin,
 	// const char *my_nick = params[0];
 	const char *message = params[1];
 	if (debug) {
-		printf("[%s] %s\n", origin, message);
+		printf("<%s> %s\n", origin, message);
 	}
 
 	if (message) {
 		irc_t *irc = get_module(session);
-		bot_on_msg(irc->module.bot, &irc->module, NULL, origin, message);
+		bot_on_privmsg(irc->module.bot, &irc->module, origin, message);
 	}
 }
 

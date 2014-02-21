@@ -34,6 +34,10 @@ bot_on_msg(bot_t *bot, module_t *from_module, const char *channel,
 		const char *sender, const char *message);
 
 void
+bot_on_privmsg(bot_t *bot, module_t *from_module, const char *sender,
+		const char *message);
+
+void
 bot_on_read_log(bot_t *bot, const char *sender, const char *message);
 
 void

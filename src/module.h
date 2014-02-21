@@ -26,6 +26,8 @@ struct module {
 	// Callbacks
 	void (*on_msg) (module_t *module, module_t *from_module, const char *channel,
 		const char *sender, const char *message);
+	void (*on_privmsg) (module_t *module, module_t *from_module,
+		const char *sender, const char *message);
 	void (*on_read_log) (module_t *module,
 		const char *sender, const char *message);
 };

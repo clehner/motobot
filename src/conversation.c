@@ -24,16 +24,27 @@ on_msg(module_t *module, module_t *from_module, const char *channel,
 		return;
 	}
 
-	// Learn message if it is in a channel (not a privmsg)
-	if (channel) {
-		mm_learn_sentence(conv->model, message);
+	// Learn message
+	mm_learn_sentence(conv->model, message);
 
-		// Send response to channel
-		bot_send(module->bot, module, from_module, channel, response);
-	} else {
-		// Respond to PM
-		bot_send(module->bot, module, from_module, sender, response);
+	// Send response to channel
+	bot_send(module->bot, module, from_module, channel, response);
+}
+
+static void
+on_privmsg(module_t *module, module_t *from_module, const char *sender,
+		const char *message) {
+	conversation_t *conv = (conversation_t *)module;
+	char response[MAX_LINE_LENGTH];
+
+	// Generate response, without learning
+	if (!mm_respond_and_learn(conv->model, message, response, 0)) {
+		fprintf(stderr, "Unable to respond\n");
+		return;
 	}
+
+	// Send PM response
+	bot_send(module->bot, module, from_module, sender, response);
 }
 
 static void
@@ -55,6 +66,7 @@ conversation_new() {
 
 	conv->module.type = "conversation";
 	conv->module.on_msg = on_msg;
+	conv->module.on_privmsg = on_privmsg;
 	conv->module.on_read_log = on_read_log;
 	conv->model = mm_new();
 

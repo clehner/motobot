@@ -66,6 +66,15 @@ bot_on_msg(bot_t *bot, module_t *from_module, const char *channel,
 }
 
 void
+bot_on_privmsg(bot_t *bot, module_t *from_module, const char *sender,
+		const char *message) {
+	for (module_t *module = bot->modules; module; module = module->next) {
+		if (module->on_privmsg)
+			(*module->on_privmsg)(module, from_module, sender, message);
+	}
+}
+
+void
 bot_on_read_log(bot_t *bot, const char *sender, const char *message) {
 	for (module_t *module = bot->modules; module; module = module->next) {
 		if (module->on_read_log)
