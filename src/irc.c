@@ -300,6 +300,11 @@ process_select(module_t *module, fd_set *in_set, fd_set *out_set) {
 static void
 send(module_t *module, const char *channel, const char *message) {
 	irc_t *irc = (irc_t *)module;
+
+	if (debug) {
+		printf("[%s] <%s> %s\n", channel, irc->current_nick, message);
+	}
+
 	if (irc_cmd_msg(irc->session, channel, message)) {
 		fprintf(stderr, "irc: %s\n", irc_strerror(irc_errno(irc->session)));
 		return;
