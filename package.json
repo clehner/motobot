@@ -6,6 +6,7 @@
 	"keywords": ["irc", "chat", "bot", "markov"],
 	"license": "MIT",
 	"dependencies": {
+		"clehner/chains": "*"
 		"clibs/inih": "*"
 	},
 	"src": ["src/bot.c"]
