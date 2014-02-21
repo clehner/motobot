@@ -29,7 +29,7 @@ struct irc {
 	struct channel *channels;
 
 	// current
-	const char *current_nick;
+	char *current_nick;
 };
 
 struct channel {
@@ -45,7 +45,6 @@ static irc_t *modules = NULL;
 // Get the next module in the linked list of created modules
 irc_t *
 get_module(irc_session_t *session) {
-	printf("Getting module\n");
 	for (irc_t *irc = modules; irc; irc = irc->next) {
 		if (irc->session == session) {
 			return irc;
@@ -74,10 +73,10 @@ static void
 event_connect(irc_session_t *session, const char *event, const char *origin,
 		const char **params, unsigned int count) {
 	(void) params, (void) event, (void) origin, (void) params, (void) count;
-	irc_t *module = get_module(session);
+	irc_t *irc = get_module(session);
 
 	// Join our channels
-	for (channel_t *channel = module->channels; channel; channel = channel->next) {
+	for (channel_t *channel = irc->channels; channel; channel = channel->next) {
 		if (irc_cmd_join(session, channel->name, NULL)) {
 			fprintf(stderr, "irc: %s\n", irc_strerror(irc_errno(session)));
 			return;
@@ -106,8 +105,11 @@ event_numeric(irc_session_t *session, unsigned int event, const char *origin,
 			break;
 		case LIBIRC_RFC_RPL_NAMREPLY:
 			if (count > 1) {
+				/*
 				irc_t *irc = get_module(session);
+				printf("New nick: %s\n", params[0]);
 				irc->current_nick = strdup(params[0]);
+				*/
 
 				// printf("[%s] NAMREPLY: ", origin);
 				// print_array(params, count);
@@ -134,7 +136,7 @@ event_numeric(irc_session_t *session, unsigned int event, const char *origin,
 
 static void
 event_default(irc_session_t *session, const char *event, const char *origin,
-		const char ** params, unsigned int count) {
+		const char **params, unsigned int count) {
 	(void) session;
 	printf("[%s] %s: ", origin, event);
 	print_array(params, count);
@@ -142,7 +144,7 @@ event_default(irc_session_t *session, const char *event, const char *origin,
 
 static void
 event_channel(irc_session_t *session, const char *event, const char *origin,
-		const char ** params, unsigned int count) {
+		const char **params, unsigned int count) {
 	(void) session;
 	(void) event;
 	const char *channel = params[0];
@@ -164,6 +166,27 @@ event_ctcp_action(irc_session_t *session, const char *event, const char *origin,
 		return;
 	}
 	printf("[%s] * <%s> %s\n", channel, origin, message);
+}
+
+static void
+event_nick(irc_session_t *session, const char *event, const char *old_nick,
+		const char **params, unsigned int count) {
+	(void) session;
+	(void) event;
+	const char *new_nick = params[0];
+	if (count < 1) {
+		return;
+	}
+	irc_t *irc = get_module(session);
+	if (irc->current_nick && strcmp(irc->current_nick, old_nick)) {
+		printf("(nick) %s -> %s\n", old_nick, new_nick);
+	} else {
+		if (irc->current_nick) {
+			free(irc->current_nick);
+		}
+		irc->current_nick = strdup(new_nick);
+		printf("nick changed: %s\n", new_nick);
+	}
 }
 
 static int
@@ -205,6 +228,7 @@ config(module_t *module, const char *name, const char *value) {
 		irc->password = strdup(value);
 	} else if (strcmp(name, "nick") == 0) {
 		irc->nick = strdup(value);
+		irc->current_nick = strdup(value);
 	} else if (strcmp(name, "username") == 0) {
 		irc->username = strdup(value);
 	} else if (strcmp(name, "realname") == 0) {
@@ -257,6 +281,7 @@ irc_callbacks_t callbacks = {
 	.event_connect = event_connect,
 	.event_numeric = event_numeric,
 	.event_channel = event_channel,
+	.event_nick = event_nick,
 	.event_ctcp_action = event_ctcp_action
 };
 
@@ -285,7 +310,6 @@ irc_new() {
 	irc->username = "nobody";
 	irc->realname = "noname";
 	irc->channels = NULL;
-	irc->current_nick = NULL;
 
 	// Add this module to the global linked list
 	irc->next = modules;
