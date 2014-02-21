@@ -22,6 +22,6 @@ uninstall:
 	rm -f $(DESTDIR)$(BINDIR)/$(BIN)
 
 clean:
-	rm $(BIN) $(OBJ)
+	rm -f $(BIN) $(OBJ)
 
 .PHONY: clean
