@@ -18,25 +18,22 @@ on_msg(module_t *module, module_t *from_module, const char *channel,
 	conversation_t *conv = (conversation_t *)module;
 	char response[MAX_LINE_LENGTH];
 
-	// Respond before learning
+	// Generate response before learning
 	if (!mm_respond_and_learn(conv->model, message, response, 0)) {
 		fprintf(stderr, "Unable to respond\n");
 		return;
 	}
-	// Learn message
-	mm_learn_sentence(conv->model, message);
 
-	// Send response
-	bot_send(module->bot, module, from_module, channel, response);
-	// (*from_module->send)(from_module, channel, response);
-
-	// Learn and log response if it is in a channel
-	/*
+	// Learn message if it is in a channel (not a privmsg)
 	if (channel) {
-		printf("Learning from %s\n", from_module->name);
-		bot_on_read_log(module->bot, from_module->name, response);
+		mm_learn_sentence(conv->model, message);
+
+		// Send response to channel
+		bot_send(module->bot, module, from_module, channel, response);
+	} else {
+		// Respond to PM
+		bot_send(module->bot, module, from_module, sender, response);
 	}
-	*/
 }
 
 static void
