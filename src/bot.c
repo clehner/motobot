@@ -15,6 +15,19 @@ bot_add_module(bot_t *bot, module_t *module) {
 	module->bot = bot;
 }
 
+void
+bot_remove_module(bot_t *bot, module_t *module) {
+	if (bot->modules == module) {
+		bot->modules = module->next;
+	} else for (module_t *prev = bot->modules; prev; prev = prev->next) {
+		if (prev->next == module) {
+			prev->next = module->next;
+			break;
+		}
+	}
+	module->bot = NULL;
+}
+
 int
 bot_connect(bot_t *bot) {
 	for (module_t *module = bot->modules; module; module = module->next) {

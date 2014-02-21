@@ -15,7 +15,10 @@ struct bot {
 };
 
 void
-bot_add_module(bot_t *bot, module_t* type);
+bot_add_module(bot_t *bot, module_t* module);
+
+void
+bot_remove_module(bot_t *bot, module_t* module);
 
 int
 bot_connect(bot_t *bot);
