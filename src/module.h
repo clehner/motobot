@@ -13,15 +13,18 @@ typedef struct module module_t;
 struct module {
 	const char *type;
 	module_t *next;
+	struct bot *bot;
 
 	// Methods
 	int (*config) (module_t *module, const char *name, const char *value);
 	int (*connect) (module_t *module);
 	int (*process_select_descriptors) (module_t *module, fd_set *in_set, fd_set *out_set);
 	int (*add_select_descriptors) (module_t *module, fd_set *in_set, fd_set *out_set, int *maxfd);
+	void (*send) (module_t *module, const char *channel, const char *message);
 
 	// Callbacks
-	int (*on_msg) (module_t *module, module_t *sender_module);
+	void (*on_msg) (module_t *module, module_t *from_module, const char *channel,
+		const char *sender, const char *message);
 };
 
 module_t *

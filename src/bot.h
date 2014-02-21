@@ -8,9 +8,11 @@
 
 #include "module.h"
 
-typedef struct {
+typedef struct bot bot_t;
+
+struct bot {
 	module_t *modules;
-} bot_t;
+};
 
 void
 bot_add_module(bot_t *bot, module_t* type);
@@ -23,5 +25,9 @@ bot_add_select_descriptors(bot_t *bot, fd_set *in_set, fd_set *out_set, int * ma
 
 int
 bot_process_select_descriptors(bot_t *bot, fd_set *in_set, fd_set *out_set);
+
+void
+bot_on_msg(bot_t *bot, module_t *from_module, const char *channel,
+		const char *sender, const char *message);
 
 #endif /* BOT_H */

@@ -9,9 +9,10 @@ void
 bot_module_foreach(bot_t *bot);
 
 void
-bot_add_module(bot_t *bot, module_t* module) {
+bot_add_module(bot_t *bot, module_t *module) {
 	module->next = bot->modules;
 	bot->modules = module;
+	module->bot = bot;
 }
 
 int
@@ -40,4 +41,13 @@ bot_process_select_descriptors(bot_t *bot, fd_set *in_set, fd_set *out_set) {
 			(*module->process_select_descriptors)(module, in_set, out_set);
 	}
 	return 1;
+}
+
+void
+bot_on_msg(bot_t *bot, module_t *from_module, const char *channel,
+		const char *sender, const char *message) {
+	for (module_t *module = bot->modules; module; module = module->next) {
+		if (module->on_msg)
+			(*module->on_msg)(module, from_module, channel, sender, message);
+	}
 }

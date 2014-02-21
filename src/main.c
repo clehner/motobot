@@ -26,10 +26,8 @@ bot_config_handler(void* obj, const char* section, const char* name,
 		module = module_new(section);
 		if (!module) {
 			fprintf(stderr, "Unable to create module '%s'\n", section);
-			//exit(1);
 			return 0;
 		}
-		printf("Created module '%s'\n", section);
 
 		bot_add_module(&bot, module);
 	}
@@ -44,8 +42,6 @@ main(int argc, char *argv[]) {
 	struct timeval tv;
 	fd_set in_set, out_set;
 	int maxfd = 0;
-
-	// bot_module_add(irc);
 
     if (argc != 2) {
         fprintf(stderr, "Usage: %s config.ini\n", argv[0]);

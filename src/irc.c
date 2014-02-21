@@ -10,7 +10,10 @@
 #include "libircclient/libirc_errors.h"
 #include "libircclient/libirc_events.h"
 #include "module.h"
+#include "bot.h"
 #include "irc.h"
+
+#define debug 0
 
 struct irc {
 	module_t module;
@@ -40,6 +43,8 @@ struct channel {
 typedef struct channel channel_t;
 
 // Linked-list of module instances
+// This is used to map irc_session to irc module
+// because ircclient doesn't let us store arbitrary data in the irc_session_t
 static irc_t *modules = NULL;
 
 // Get the next module in the linked list of created modules
@@ -74,6 +79,9 @@ event_connect(irc_session_t *session, const char *event, const char *origin,
 		const char **params, unsigned int count) {
 	(void) params, (void) event, (void) origin, (void) params, (void) count;
 	irc_t *irc = get_module(session);
+
+	if (debug)
+		printf("Connected.\n");
 
 	// Join our channels
 	for (channel_t *channel = irc->channels; channel; channel = channel->next) {
@@ -129,8 +137,10 @@ event_numeric(irc_session_t *session, unsigned int event, const char *origin,
 			break;
 
 		default:
-			printf("[%s] %u: ", origin, event);
-			print_array(params, count);
+			if (debug) {
+				printf("[%s] %u: ", origin, event);
+				print_array(params, count);
+			}
 	}
 }
 
@@ -147,12 +157,16 @@ event_channel(irc_session_t *session, const char *event, const char *origin,
 		const char **params, unsigned int count) {
 	(void) session;
 	(void) event;
+	(void) count;
 	const char *channel = params[0];
 	const char *message = params[1];
-	if (count < 2) {
-		return;
+	if (debug) {
+		printf("[%s] <%s> %s\n", channel, origin, message);
 	}
-	printf("[%s] <%s> %s\n", channel, origin, message);
+
+	irc_t *irc = get_module(session);
+	bot_on_msg(irc->module.bot, &irc->module, channel, origin, message);
+
 }
 
 static void
@@ -160,12 +174,12 @@ event_ctcp_action(irc_session_t *session, const char *event, const char *origin,
 		const char **params, unsigned int count) {
 	(void) session;
 	(void) event;
+	(void) count;
 	const char *channel = params[0];
 	const char *message = params[1];
-	if (count < 2) {
-		return;
+	if (debug) {
+		printf("[%s] * <%s> %s\n", channel, origin, message);
 	}
-	printf("[%s] * <%s> %s\n", channel, origin, message);
 }
 
 static void
@@ -185,7 +199,9 @@ event_nick(irc_session_t *session, const char *event, const char *old_nick,
 			free(irc->current_nick);
 		}
 		irc->current_nick = strdup(new_nick);
-		printf("nick changed: %s\n", new_nick);
+		if (debug) {
+			printf("Nick changed: %s\n", new_nick);
+		}
 	}
 }
 
@@ -247,9 +263,11 @@ config(module_t *module, const char *name, const char *value) {
 static int
 module_connect(module_t *module) {
 	irc_t *irc = (irc_t *)module;
-	printf("Connecting to server: %s, port: %u\n",
-		&irc->server[irc->ssl ? 0 : 1],
-		irc->port);
+	if (debug) {
+		printf("Connecting to server: %s, port: %u\n",
+			&irc->server[irc->ssl ? 0 : 1],
+			irc->port);
+	}
 	if ((irc->ipv6 ? irc_connect6 : irc_connect)
 			(irc->session,
 			 &irc->server[irc->ssl ? 0 : 1],
@@ -276,6 +294,14 @@ process_select(module_t *module, fd_set *in_set, fd_set *out_set) {
 	return irc_process_select_descriptors(irc->session, in_set, out_set);
 }
 
+static void
+send(module_t *module, const char *channel, const char *message) {
+	irc_t *irc = (irc_t *)module;
+	if (irc_cmd_msg(irc->session, channel, message)) {
+		fprintf(stderr, "irc: %s\n", irc_strerror(irc_errno(irc->session)));
+	}
+}
+
 // Callbacks for IRC client
 irc_callbacks_t callbacks = {
 	.event_connect = event_connect,
@@ -300,6 +326,7 @@ irc_new() {
 	irc->module.config = config;
 	irc->module.process_select_descriptors = process_select;
 	irc->module.add_select_descriptors = add_select;
+	irc->module.send = send;
 
 	irc->server = "";
 	irc->ssl = 0;
