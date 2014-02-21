@@ -5,7 +5,54 @@
 
 #include <stdio.h>
 #include <string.h>
+#include "libircclient/libircclient.h"
+#include "libircclient/libirc_rfcnumeric.h"
+#include "libircclient/libirc_errors.h"
+#include "libircclient/libirc_events.h"
+#include "module.h"
 #include "irc.h"
+
+struct irc {
+	module_t module;
+	irc_session_t *session;
+	struct irc *next;
+
+	// config
+	const char *server;
+	unsigned char ssl;
+	unsigned char ipv6;
+	unsigned short port;
+	const char *password;
+	const char *nick;
+	const char *username;
+	const char *realname;
+	struct channel *channels;
+
+	// current
+	const char *current_nick;
+};
+
+struct channel {
+	const char *name;
+	struct channel *next;
+};
+
+typedef struct channel channel_t;
+
+// Linked-list of module instances
+static irc_t *modules = NULL;
+
+// Get the next module in the linked list of created modules
+irc_t *
+get_module(irc_session_t *session) {
+	printf("Getting module\n");
+	for (irc_t *irc = modules; irc; irc = irc->next) {
+		if (irc->session == session) {
+			return irc;
+		}
+	}
+	return NULL;
+}
 
 char *my_strdup(const char *s) {
 	size_t len = strlen(s) + 1;
@@ -16,19 +63,31 @@ char *my_strdup(const char *s) {
 char *my_strdup(const char *s);
 #define strdup(x) my_strdup(x)
 
-static void
-event_connect(irc_session_t * session, const char * event, const char * origin, const char ** params, unsigned int count) {
-	(void) session;
-	(void) params;
-	(void) event;
-	(void) origin;
-	(void) params;
-	(void) count;
-	printf("Connected!\n");
+void
+print_array(const char *array[], int n) {
+	for (int i = 0; i < n; i++) {
+		printf("%s%s", array[i], i < n-1 ? ", " : "\n");
+	}
 }
 
 static void
-event_numeric(irc_session_t * session, unsigned int event, const char * origin, const char ** params, unsigned int count) {
+event_connect(irc_session_t *session, const char *event, const char *origin,
+		const char **params, unsigned int count) {
+	(void) params, (void) event, (void) origin, (void) params, (void) count;
+	irc_t *module = get_module(session);
+
+	// Join our channels
+	for (channel_t *channel = module->channels; channel; channel = channel->next) {
+		if (irc_cmd_join(session, channel->name, NULL)) {
+			fprintf(stderr, "irc: %s\n", irc_strerror(irc_errno(session)));
+			return;
+		}
+	}
+}
+
+static void
+event_numeric(irc_session_t *session, unsigned int event, const char *origin,
+		const char **params, unsigned int count) {
 	(void) session;
 	(void) params;
 	(void) count;
@@ -37,21 +96,74 @@ event_numeric(irc_session_t * session, unsigned int event, const char * origin, 
 			fprintf(stderr, "[%s] Bad password\n", origin);
 			break;
 		case LIBIRC_RFC_RPL_MOTD:
+			/*
 			if (count > 1) {
 				printf("[%s] MOTD: %s\n", origin, params[1]);
 			}
+			*/
 		case LIBIRC_RFC_RPL_MOTDSTART:
 		case LIBIRC_RFC_RPL_ENDOFMOTD:
 			break;
 		case LIBIRC_RFC_RPL_NAMREPLY:
 			if (count > 1) {
-				printf("[%s] NAMREPLY: %s\n", origin, params[1]);
+				irc_t *irc = get_module(session);
+				irc->current_nick = strdup(params[0]);
+
+				// printf("[%s] NAMREPLY: ", origin);
+				// print_array(params, count);
+				// nick, thingy, channel, member member2...
 			}
 		case LIBIRC_RFC_RPL_ENDOFNAMES:
 			break;
+
+		case LIBIRC_RFC_ERR_BANNEDFROMCHAN:
+		case LIBIRC_RFC_ERR_INVITEONLYCHAN:
+		case LIBIRC_RFC_ERR_BADCHANNELKEY:
+		case LIBIRC_RFC_ERR_CHANNELISFULL:
+		case LIBIRC_RFC_ERR_BADCHANMASK:
+		case LIBIRC_RFC_ERR_NOSUCHCHANNEL:
+		case LIBIRC_RFC_ERR_TOOMANYCHANNELS:
+			fprintf(stderr, "Unable to join channel: %s\n", irc_strerror(irc_errno(session)));
+			break;
+
 		default:
-			printf("Got event %u (%s)\n", event, origin);
+			printf("[%s] %u: ", origin, event);
+			print_array(params, count);
 	}
+}
+
+static void
+event_default(irc_session_t *session, const char *event, const char *origin,
+		const char ** params, unsigned int count) {
+	(void) session;
+	printf("[%s] %s: ", origin, event);
+	print_array(params, count);
+}
+
+static void
+event_channel(irc_session_t *session, const char *event, const char *origin,
+		const char ** params, unsigned int count) {
+	(void) session;
+	(void) event;
+	const char *channel = params[0];
+	const char *message = params[1];
+	if (count < 2) {
+		return;
+	}
+	printf("[%s] <%s> %s\n", channel, origin, message);
+}
+
+static void
+event_ctcp_action(irc_session_t *session, const char *event, const char *origin,
+		const char **params, unsigned int count) {
+	(void) session;
+	(void) event;
+	const char *channel = params[0];
+	const char *message = params[1];
+	if (count < 2) {
+		return;
+	}
+	printf("[%s] * <%s> %s\n", channel, origin, message);
 }
 
 static int
@@ -97,6 +209,13 @@ config(module_t *module, const char *name, const char *value) {
 		irc->username = strdup(value);
 	} else if (strcmp(name, "realname") == 0) {
 		irc->realname = strdup(value);
+
+	} else if (strcmp(name, "channel") == 0) {
+		// Add channel to the linked list
+		channel_t *channel = malloc(sizeof(channel));
+		channel->name = strdup(value);
+		channel->next = irc->channels;
+		irc->channels = channel;
 	}
 	return 1;
 }
@@ -133,11 +252,19 @@ process_select(module_t *module, fd_set *in_set, fd_set *out_set) {
 	return irc_process_select_descriptors(irc->session, in_set, out_set);
 }
 
+// Callbacks for IRC client
+irc_callbacks_t callbacks = {
+	.event_connect = event_connect,
+	.event_numeric = event_numeric,
+	.event_channel = event_channel,
+	.event_ctcp_action = event_ctcp_action
+};
+
 irc_t *
 irc_new() {
 	irc_t *irc = calloc(1, sizeof(irc_t));
-	// irc_t *irc = malloc(sizeof(irc_t));
-	// memset(irc, 0, sizeof(irc_t));
+	(void) event_default;
+
 	if (!irc) {
 		perror("calloc");
 		return NULL;
@@ -157,15 +284,20 @@ irc_new() {
 	irc->nick = "guest";
 	irc->username = "nobody";
 	irc->realname = "noname";
+	irc->channels = NULL;
+	irc->current_nick = NULL;
 
-	irc->callbacks.event_connect = event_connect;
-	irc->callbacks.event_numeric = event_numeric;
+	// Add this module to the global linked list
+	irc->next = modules;
+	modules = irc;
 
-	irc->session = irc_create_session(&irc->callbacks);
+	irc->session = irc_create_session(&callbacks);
 	if (!irc->session) {
 		fprintf(stderr, "irc: %s\n", irc_strerror(irc_errno(irc->session)));
 	}
+	irc_option_set(irc->session, LIBIRC_OPTION_STRIPNICKS);
+
+	// irc_is_connected(session)
 
 	return irc;
 }
-
