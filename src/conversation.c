@@ -25,10 +25,12 @@ on_msg(module_t *module, module_t *from_module, const char *channel,
 	}
 	// Skip the initial nick prefix
 	message += name_len;
-	// Skip ':' if command is prefixed with 'nick:'
-	if (message[0] == ':') {
-		message++;
+
+	// Read ':' so that message must start with 'nick:'
+	if (message[0] != ':') {
+		return;
 	}
+	message++;
 	// Skip spaces
 	while(message[0] == ' ') {
 		message++;
