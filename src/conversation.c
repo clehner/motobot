@@ -18,8 +18,6 @@ on_msg(module_t *module, module_t *from_module, const char *channel,
 	conversation_t *conv = (conversation_t *)module;
 	char response[MAX_LINE_LENGTH];
 	size_t name_len = strlen(from_module->name);
-	command_handler_t command_handler;
-	const char *command_args = "";
 
 	// Message must start with our nick for us to consider it
 	if (strncmp(from_module->name, message, name_len)) {
@@ -37,8 +35,9 @@ on_msg(module_t *module, module_t *from_module, const char *channel,
 	}
 
 	// Is this a command?
-	if (command_parse(from_module, message, &command_handler, &command_args)) {
-		command_handler(module, from_module, channel, sender, command_args);
+	if (message[0] == '/') {
+		command_exec((command_env_t) {module, from_module, channel, sender},
+				message);
 		return;
 	}
 

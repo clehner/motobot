@@ -9,12 +9,17 @@
 #include "module.h"
 #include "bot.h"
 
-typedef void (*command_handler_t) (module_t *module, module_t *from_module,
-		const char *channel, const char *sender, const char *args);
+typedef struct {
+	module_t *module;
+	module_t *from_module;
+	const char *channel;
+	const char *sender;
+} command_env_t;
+
+typedef void (*command_handler_t) (command_env_t env, int argc, char **argv);
 
 int
-command_parse(module_t *module, const char *command,
-		command_handler_t *handler, const char **args);
+command_exec(command_env_t env, const char *message);
 
 #endif /* COMMAND_H */
 

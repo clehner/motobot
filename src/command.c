@@ -4,79 +4,69 @@
 #include "command.h"
 
 void
-command_help(module_t *module, module_t *from_module, const char *channel,
-		const char *sender, const char *args);
+command_help(command_env_t env, int argc, char **argv);
 void
-command_unknown(module_t *module, module_t *from_module, const char *channel,
-		const char *sender, const char *args);
+command_unknown(command_env_t env, int argc, char **argv);
 
-static struct {
+typedef struct {
 	const char *name;
 	command_handler_t handler;
-} command_handlers[] = {
-	{"help", command_help},
+} named_handler_t;
+
+named_handler_t command_handlers[] = {
+	{"/help", command_help},
 	{NULL, command_unknown}
 };
 
 void
-command_help(module_t *module, module_t *from_module, const char *channel,
-		const char *sender, const char *args) {
-	const char *response = "help";
-	bot_send(module->bot, module, from_module, channel, "Commands:");
+command_help(command_env_t env, int argc, char **argv) {
+	char resp[256];
+	strcpy(resp, "Commands: ");
 	for (int i = 0; command_handlers[i].name; i++) {
-		// printf("command_handlers[i].name\n", i);
-		bot_send(module->bot, module, from_module, channel, command_handlers[i].name);
+		if (i > 0) strcat(resp, ", ");
+		strcat(resp, command_handlers[i].name);
 	}
-	// bot_send(module->bot, module, from_module, channel, response);
+	bot_send(env.module->bot, env.module, env.from_module, env.channel, resp);
 }
 
 void
-command_unknown(module_t *module, module_t *from_module, const char *channel,
-		const char *sender, const char *args) {
-	const char *response = "Unknown command";
-	bot_send(module->bot, module, from_module, channel, response);
+command_unknown(command_env_t env, int argc, char **argv) {
+	char response[128];
+	sprintf(response, "Unknown command %s", argv[0]);
+	response[127] = 0;
+	bot_send(env.module->bot, env.module, env.from_module, env.channel, response);
 }
 
-// Parse a message into handler function and argument string
+// Parse a message into handler function and argument string,
+// and execute the handler function with the arguments as an array
 int
-command_parse(module_t *module, const char *command,
-		command_handler_t *handler, const char **args) {
-	size_t command_len;
-	const char *command_args;
+command_exec(command_env_t env, const char *message) {
+	const char *command;
+	command_handler_t handler;
+	int command_argc = 0;
+	char *command_argv[128];
+	char command_buf[256];
 
 	// Commands are formatted 'nick: /command ...' or 'nick /command ...'
 	// We've already read the 'nick: ' part
 
-	// Skip '/'
-	if (command[0] == '/') {
-		command++;
-	} else {
-		return 0;
+	// Split on spaces to get the command name and args
+	strncpy(command_buf, message, sizeof command_buf);
+	for (char *arg = strtok(command_buf, " "); arg; arg = strtok(NULL, " ")) {
+		// Add the current word
+		printf("arg: %s\n", arg);
+		command_argv[command_argc++] = arg;
 	}
-
-	// Split command name and args
-	command_args = strchr(command, ' ');
-	if (command_args) {
-		command_len = command_args - command;
-		// skip space
-		while (command_args[0] == ' ') {
-			command_args++;
-		}
-	} else {
-		// no arguments, only command name
-		command_len = strlen(command);
-		command_args = NULL;
-	}
-	*args = command_args;
+	command = command_argv[0];
 
 	// Find the command handler.
 	// The last command in the handlers array should be a catch-all
 	// and have null name.
 	int i = 0;
 	while (command_handlers[i].name &&
-			strncmp(command, command_handlers[i].name, command_len) != 0) i++;
-	*handler = command_handlers[i].handler;
-	printf("i=%d, name=%s\n", i, command_handlers[i].name);
+			strcmp(command, command_handlers[i].name) != 0) i++;
+	handler = command_handlers[i].handler;
+	handler(env, command_argc, command_argv);
 	return 1;
 }
 
