@@ -35,7 +35,6 @@ struct irc {
 
 	// current
 	char *current_nick;
-	char in_playback_mode;
 };
 
 struct channel {
@@ -161,37 +160,6 @@ event_channel(irc_session_t *session, const char *event, const char *origin,
 	}
 
 	irc_t *irc = get_module(session);
-
-	// Treat ZNC's buffered-up messages as new
-	// (potentially responding to them)
-	if (!irc->in_playback_mode) {
-		if (strcmp(origin, "***") == 0 &&
-				strcmp(message, "Buffer Playback...") == 0) {
-			if (debug) printf("Entering buffer playback mode\n");
-			irc->in_playback_mode = 1;
-			return;
-		}
-
-	} else {
-		if (strcmp(origin, "***") == 0 &&
-				strcmp(message, "Playback Complete.") == 0) {
-			if (debug) printf("Buffer playback complete\n");
-			irc->in_playback_mode = 0;
-			return;
-		}
-
-		// This is a played-back message.
-		// Skip the timestamp (first word)
-		message = strchr(message, ' ');
-		if (!message) {
-			fprintf(stderr, "Broken played-back message\n");
-			return;
-		}
-		// Skip the space after the timestamp
-		message++;
-	}
-
-	// Process message
 	bot_on_msg(irc->module.bot, &irc->module, channel, origin, message);
 }
 

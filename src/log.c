@@ -11,6 +11,7 @@ struct log {
 	char post_url[256];
 	char filename[256];
 	FILE *file;
+	char in_playback_mode;
 };
 
 static int
@@ -74,6 +75,39 @@ static void
 on_msg(module_t *module, module_t *from_module, const char *channel,
 		const char *sender, const char *message) {
 	log_t *log = (log_t *)module;
+
+	// Check for ZNC's buffered-up messages.
+	// Treat them as new (potentially responding to them)
+	if (!log->in_playback_mode) {
+		if (strcmp(sender, "***") == 0 &&
+				strcmp(message, "Buffer Playback...") == 0) {
+			log->in_playback_mode = 1;
+			return;
+		}
+
+	} else {
+		if (strcmp(sender, "***") == 0 &&
+				strcmp(message, "Playback Complete.") == 0) {
+			log->in_playback_mode = 0;
+			return;
+		}
+
+		// Played-back messages start with a [timestamp]
+		if (message[0] == '[') {
+			log->in_playback_mode = 0;
+		} else {
+			// This is a played-back message.
+			// Skip the timestamp (first word)
+			message = strchr(message, ' ');
+			if (!message) {
+				fprintf(stderr, "Broken played-back message\n");
+				return;
+			}
+			// Skip the space after the timestamp
+			message++;
+		}
+	}
+
 	log_message(log, sender, message);
 }
 
