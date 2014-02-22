@@ -13,7 +13,7 @@
 #include "bot.h"
 #include "irc.h"
 
-#define debug 1
+#define debug 0
 
 typedef struct irc irc_t;
 

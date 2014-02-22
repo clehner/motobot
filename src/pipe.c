@@ -11,9 +11,6 @@ static char bufin[4096];
 
 static int
 add_select(module_t *module, fd_set *in_set, fd_set *out_set, int *maxfd) {
-	(void) module;
-	(void) maxfd;
-	(void) out_set;
 	FD_SET(STDIN_FILENO, in_set);
 	// FD_SET(STDOUT_FILENO, out_set);
 	return 1;
@@ -21,8 +18,6 @@ add_select(module_t *module, fd_set *in_set, fd_set *out_set, int *maxfd) {
 
 static int
 process_select(module_t *module, fd_set *in_set, fd_set *out_set) {
-	(void) module;
-	(void) out_set;
 	if (FD_ISSET(STDIN_FILENO, in_set)) {
 		if(fgets(bufin, sizeof bufin, stdin) == NULL) {
 			// pipe closed. remove module
@@ -41,15 +36,13 @@ process_select(module_t *module, fd_set *in_set, fd_set *out_set) {
 			bufin[len-1] = '\0';
 		}
 
-		bot_on_msg(module->bot, module, NULL, "(stdin)", bufin);
+		bot_on_privmsg(module->bot, module, "(stdin)", bufin);
 	}
 	return 1;
 }
 
 static void
 send(module_t *module, const char *channel, const char *message) {
-	(void) module;
-	(void) channel;
 	puts(message);
 }
 
