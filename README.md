@@ -5,16 +5,35 @@
 Based on [rochako](https://github.com/rochack/rochako)
 
 # Features
-- connects to irc
-- responds using markov chains
-- reads and writes channel activity to a log file
+- Modular structure
+- Connects to IRC
+- Responds using [markov chains](https://github.com/clehner/chains)
+- Reads and writes channel activity to a log file
 
 # Installation
-- run `make`
-- make a config file
-- run the program
+- Get dependencies
+```
+apt-get install libircclient-dev
+```
+
+- Compile
+```
+make
+```
+
+- Make a config file
+```
+cp config.def.ini config.ini
+vi config.ini
+```
+
+- Run the program
+```
+./motobot config.ini
+```
 
 # Todo
-- upload channel activity to couch
+- Upload channel activity to couchdb
 - /clone - multiple connections and derivative corpuses
 - /join - move into other rooms
+- /karma
