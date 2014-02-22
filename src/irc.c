@@ -156,6 +156,11 @@ event_privmsg(irc_session_t *session, const char *event, const char *origin,
 	const char *message = params[1];
 	printf("<%s> %s\n", origin, message);
 
+	// Ignore messages from *special
+	if (origin[0] == '*') {
+		return;
+	}
+
 	if (message) {
 		irc_t *irc = get_module(session);
 		bot_on_privmsg(irc->module.bot, &irc->module, origin, message);
