@@ -110,17 +110,13 @@ event_numeric(irc_session_t *session, unsigned int event, const char *origin,
 		case LIBIRC_RFC_RPL_ENDOFMOTD:
 			break;
 		case LIBIRC_RFC_RPL_NAMREPLY:
+			/*
 			if (count > 1) {
-				/*
-				irc_t *irc = get_module(session);
-				printf("New nick: %s\n", params[0]);
-				irc->current_nick = strdup(params[0]);
-				*/
-
-				// printf("[%s] NAMREPLY: ", origin);
-				// print_array(params, count);
-				// nick, thingy, channel, member member2...
+				printf("[%s] NAMREPLY: ", origin);
+				print_array(params, count);
+				nick, thingy, channel, member member2...
 			}
+			*/
 		case LIBIRC_RFC_RPL_ENDOFNAMES:
 			break;
 
@@ -141,13 +137,6 @@ event_numeric(irc_session_t *session, unsigned int event, const char *origin,
 				print_array(params, count);
 			}
 	}
-}
-
-static void
-event_default(irc_session_t *session, const char *event, const char *origin,
-		const char **params, unsigned int count) {
-	printf("[%s] %s: ", origin, event);
-	print_array(params, count);
 }
 
 static void
@@ -360,8 +349,6 @@ irc_new() {
 		fprintf(stderr, "irc: %s\n", irc_strerror(irc_errno(irc->session)));
 	}
 	irc_option_set(irc->session, LIBIRC_OPTION_STRIPNICKS);
-
-	// irc_is_connected(session)
 
 	return (module_t *)irc;
 }
