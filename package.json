@@ -1,13 +1,13 @@
 {
 	"name": "motobot",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"repo": "clehner/motobot",
-	"description": "IRC Conversation bot",
-	"keywords": ["irc", "chat", "bot", "markov"],
+	"description": "Modular IRC conversation bot",
+	"keywords": ["irc", "chat", "bot", "markov", "chains"],
 	"license": "MIT",
 	"dependencies": {
+		"clibs/inih": "*",
 		"clehner/chains": "*"
-		"clibs/inih": "*"
 	},
-	"src": ["src/bot.c"]
+	"install": "make install"
 }
