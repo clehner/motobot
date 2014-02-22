@@ -81,8 +81,7 @@ event_connect(irc_session_t *session, const char *event, const char *origin,
 		const char **params, unsigned int count) {
 	irc_t *irc = get_module(session);
 
-	if (debug)
-		printf("Connected.\n");
+	printf("Connected to %s:%u.\n", irc->server, irc->port);
 
 	// Join our channels
 	for (channel_t *channel = irc->channels; channel; channel = channel->next) {
@@ -144,9 +143,7 @@ event_channel(irc_session_t *session, const char *event, const char *origin,
 		const char **params, unsigned int count) {
 	const char *channel = params[0];
 	const char *message = params[1];
-	if (debug) {
-		printf("[%s] <%s> %s\n", channel, origin, message);
-	}
+	printf("[%s] <%s> %s\n", channel, origin, message);
 
 	irc_t *irc = get_module(session);
 	bot_on_msg(irc->module.bot, &irc->module, channel, origin, message);
@@ -157,9 +154,7 @@ event_privmsg(irc_session_t *session, const char *event, const char *origin,
 		const char **params, unsigned int count) {
 	// const char *my_nick = params[0];
 	const char *message = params[1];
-	if (debug) {
-		printf("<%s> %s\n", origin, message);
-	}
+	printf("<%s> %s\n", origin, message);
 
 	if (message) {
 		irc_t *irc = get_module(session);
@@ -196,6 +191,11 @@ event_nick(irc_session_t *session, const char *event, const char *old_nick,
 		if (debug) {
 			printf("Nick changed: %s\n", new_nick);
 		}
+		/*
+		if (irc_cmd_nick(session, irc->realname)) {
+			fprintf(stderr, "irc: %s\n", irc_strerror(irc_errno(irc->session)));
+		}
+		*/
 	}
 }
 
@@ -211,7 +211,7 @@ config(module_t *module, const char *name, const char *value) {
 			server[0] = '#';
 			strncpy(server+1, value, len);
 		}
-		irc->server = server;
+		irc->server = server+1;
 
 	} else if (strcmp(name, "ssl") == 0) {
 		if (strcmp(value, "yes") == 0) {
@@ -258,12 +258,12 @@ module_connect(module_t *module) {
 	irc_t *irc = (irc_t *)module;
 	if (debug) {
 		printf("Connecting to server: %s, port: %u\n",
-			&irc->server[irc->ssl ? 0 : 1],
+			&irc->server[irc->ssl ? -1 : 0],
 			irc->port);
 	}
 	if ((irc->ipv6 ? irc_connect6 : irc_connect)
 			(irc->session,
-			 &irc->server[irc->ssl ? 0 : 1],
+			 &irc->server[irc->ssl ? -1 : 0],
 			 irc->port,
 			 irc->password,
 			 irc->nick,
@@ -291,9 +291,7 @@ static void
 send(module_t *module, const char *channel, const char *message) {
 	irc_t *irc = (irc_t *)module;
 
-	if (debug) {
-		printf("[%s] <%s> %s\n", channel, irc->current_nick, message);
-	}
+	printf("[%s] <%s> %s\n", channel, irc->current_nick, message);
 
 	if (irc_cmd_msg(irc->session, channel, message)) {
 		fprintf(stderr, "irc: %s\n", irc_strerror(irc_errno(irc->session)));
