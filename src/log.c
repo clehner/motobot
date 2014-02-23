@@ -81,7 +81,6 @@ static void
 config(module_t *module, const char *name, const char *value) {
 	log_t *log = (log_t *)module;
 	if (strcmp(name, "file") == 0) {
-		load_file(log, value);
 		strncpy(log->filename, value, sizeof(log->filename));
 	} else if (strcmp(name, "post") == 0) {
 		strncpy(log->post_url, value, sizeof(log->post_url));
@@ -91,6 +90,9 @@ config(module_t *module, const char *name, const char *value) {
 static int
 module_connect(module_t *module) {
 	log_t *log = (log_t *)module;
+
+	// Read log
+	load_file(log, log->filename);
 
 	// Open log file for writing
 	log->file = fopen(log->filename, "a");
