@@ -95,12 +95,12 @@ process_message(karma_t *karma, const char *message) {
 					id_copy = id;
 				} else {
 					// Allocate a string for this id to put it into the table
-					id_copy = (char *)malloc(id_len * sizeof(char));
+					id_copy = (char *)malloc((id_len+1) * sizeof(char));
 					if (!id_copy) {
 						perror("malloc");
 						return;
 					}
-					strncpy(id_copy, id, id_len);
+					strncpy(id_copy, id, id_len+1);
 				}
 				votes += (ssize_t)hash_get(table, id);
 				hash_set(table, id_copy, (void *)votes);
