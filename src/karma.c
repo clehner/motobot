@@ -8,6 +8,7 @@
 #include "hash/hash.h"
 #include "karma.h"
 #include "regex.h"
+#include "command.h"
 
 struct karma {
 	module_t module;
@@ -26,6 +27,7 @@ bool regexes_compiled = false;
 static int
 compile_regexes() {
 	if (regexes_compiled) return 1;
+	regexes_compiled = true;
 	if (regcomp(&r_id, R_ID, 0) ||
 			regcomp(&r_plus, R_PLUS, 0) ||
 			regcomp(&r_minus, R_MINUS, 0)) {
@@ -53,7 +55,7 @@ process_message(karma_t *karma, const char *message) {
 			word;
 			word = strtok(NULL, DELIMETERS)) {
 
-		// Match the message against the regexes
+		// Match the word against the regexes
 		error = regexec(&r_id, word, 2, matches, 0);
 		if (error == REG_NOMATCH) {
 			// printf("No match for %s\n", word);
@@ -97,6 +99,21 @@ static void
 on_read_log(module_t *module, const char *sender, const char *message) {
 	karma_t *karma = (karma_t *)module;
 	process_message(karma, message);
+}
+
+void
+command_karma(command_env_t env, int argc, char **argv) {
+	karma_t *karma = (karma_t *)env.module;
+	if (argc < 2) {
+		// TODO: Give a listing of top karma
+		command_respond(env, "Usage: %s thing", argv[0]);
+		return;
+	}
+
+	char *id = argv[1];
+	// Cast void* to signed int using ssize_t
+	int amount = (ssize_t)hash_get(karma->karma, id);
+	command_respond(env, "%s: %d", id, amount);
 }
 
 module_t *
