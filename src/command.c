@@ -26,7 +26,7 @@ command_help(command_env_t env, int argc, char **argv) {
 		if (i > 0) strcat(resp, ", ");
 		strcat(resp, command_handlers[i].name);
 	}
-	bot_send(env.module->bot, env.module, env.from_module, env.channel, resp);
+	command_respond(env, resp);
 }
 
 void
@@ -34,7 +34,7 @@ command_unknown(command_env_t env, int argc, char **argv) {
 	char response[128];
 	sprintf(response, "Unknown command %s", argv[0]);
 	response[127] = 0;
-	bot_send(env.module->bot, env.module, env.from_module, env.channel, response);
+	command_respond(env, response);
 }
 
 // Parse a message into handler function and argument string,
@@ -68,5 +68,10 @@ command_exec(command_env_t env, const char *message) {
 	handler = command_handlers[i].handler;
 	handler(env, command_argc, command_argv);
 	return 1;
+}
+
+void
+command_respond(command_env_t env, const char *resp) {
+	bot_send(env.module->bot, env.module, env.from_module, env.channel, resp);
 }
 
