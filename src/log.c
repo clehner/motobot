@@ -31,6 +31,8 @@ load_file(log_t *log, const char *filename) {
 	char sender[64];
 	char *message;
 
+	printf("Loading from log file '%s'\n", filename);
+
 	FILE *file = fopen(filename, "r");
 	if (!file) {
 		perror("fopen");
@@ -67,6 +69,7 @@ load_file(log_t *log, const char *filename) {
 	}
 
 	fclose(file);
+	printf("Corpus loaded.\n");
 	return 1;
 }
 
