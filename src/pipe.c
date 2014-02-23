@@ -55,7 +55,6 @@ pipe_new() {
 	}
 
 	module->type = "pipe";
-	module->name = "(stdout)";
 	module->process_select_descriptors = process_select;
 	module->add_select_descriptors = add_select;
 	module->send = send;

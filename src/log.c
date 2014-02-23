@@ -74,6 +74,10 @@ static void
 on_msg(module_t *module, module_t *from_module, const char *channel,
 		const char *sender, const char *message) {
 	log_t *log = (log_t *)module;
+	if (!sender) {
+		// Ignore messages without a sender, e.g. from pipe module on stdout
+		return;
+	}
 	log_message(log, sender, message);
 }
 
