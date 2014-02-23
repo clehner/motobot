@@ -6,9 +6,6 @@
 #include "module.h"
 
 void
-bot_module_foreach(bot_t *bot);
-
-void
 bot_add_module(bot_t *bot, module_t *module) {
 	module->next = bot->modules;
 	bot->modules = module;
