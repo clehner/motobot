@@ -16,6 +16,8 @@ struct module {
 	module_t *next;
 	struct bot *bot;
 
+	struct command *commands;
+
 	// Methods
 	void (*config) (module_t *module, const char *name, const char *value);
 	int (*connect) (module_t *module);

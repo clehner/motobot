@@ -103,7 +103,7 @@ on_read_log(module_t *module, const char *sender, const char *message) {
 
 void
 command_karma(command_env_t env, int argc, char **argv) {
-	karma_t *karma = (karma_t *)env.module;
+	karma_t *karma = (karma_t *)env.command_module;
 	if (argc < 2) {
 		// TODO: Give a listing of top karma
 		command_respond(env, "Usage: %s thing", argv[0]);
@@ -115,6 +115,11 @@ command_karma(command_env_t env, int argc, char **argv) {
 	int amount = (ssize_t)hash_get(karma->karma, id);
 	command_respond(env, "%s: %d", id, amount);
 }
+
+static command_t commands[] = {
+	{"/karma", command_karma},
+	{NULL}
+};
 
 module_t *
 karma_new() {
@@ -129,6 +134,7 @@ karma_new() {
 	karma->module.type = "karma";
 	karma->module.on_msg = on_msg;
 	karma->module.on_read_log = on_read_log;
+	karma->module.commands = commands;
 	karma->karma = hash_new();
 
 	return (module_t *)karma;

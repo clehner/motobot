@@ -5,7 +5,6 @@
 #include "bot.h"
 #include "conversation.h"
 #include "chains/chains.h"
-#include "command.h"
 
 struct conversation {
 	module_t module;
@@ -17,7 +16,7 @@ on_msg(module_t *module, module_t *from_module, const char *channel,
 		const char *sender, const char *message) {
 	conversation_t *conv = (conversation_t *)module;
 	char response[MAX_LINE_LENGTH];
-	size_t name_len = strlen(from_module->name);
+	size_t name_len = from_module->name && strlen(from_module->name);
 
 	// Message must start with our nick for us to consider it
 	if (strncmp(from_module->name, message, name_len)) {
@@ -36,10 +35,8 @@ on_msg(module_t *module, module_t *from_module, const char *channel,
 		message++;
 	}
 
-	// Is this a command?
+	// Ignore commands
 	if (message[0] == '/') {
-		command_exec((command_env_t) {module, from_module, channel, sender},
-				message);
 		return;
 	}
 
@@ -61,6 +58,11 @@ on_privmsg(module_t *module, module_t *from_module, const char *sender,
 		const char *message) {
 	conversation_t *conv = (conversation_t *)module;
 	char response[MAX_LINE_LENGTH];
+
+	// Ignore commands
+	if (message[0] == '/') {
+		return;
+	}
 
 	// Generate response, without learning
 	if (!mm_respond_and_learn(conv->model, message, response, 0)) {
@@ -90,6 +92,7 @@ conversation_new() {
 	}
 
 	conv->module.type = "conversation";
+	conv->module.name = "???";
 	conv->module.on_msg = on_msg;
 	conv->module.on_privmsg = on_privmsg;
 	conv->module.on_read_log = on_read_log;

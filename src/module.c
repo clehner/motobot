@@ -7,6 +7,7 @@
 #include "pipe.h"
 #include "log.h"
 #include "karma.h"
+#include "command.h"
 
 module_t *
 module_new(const char *type) {
@@ -20,6 +21,8 @@ module_new(const char *type) {
 		return log_new();
 	} else if (strcmp(type, "karma") == 0) {
 		return karma_new();
+	} else if (strcmp(type, "commands") == 0) {
+		return commands_new();
 	} else {
 		return NULL;
 	}
