@@ -16,7 +16,7 @@ on_msg(module_t *module, module_t *from_module, const char *channel,
 		const char *sender, const char *message) {
 	conversation_t *conv = (conversation_t *)module;
 	char response[MAX_LINE_LENGTH];
-	size_t name_len = from_module->name && strlen(from_module->name);
+	size_t name_len = from_module->name ? strlen(from_module->name) : 0;
 
 	// Message must start with our nick for us to consider it
 	if (strncmp(from_module->name, message, name_len)) {
