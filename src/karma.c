@@ -122,12 +122,76 @@ on_read_log(module_t *module, const char *sender, const char *message) {
 	process_message(karma, message);
 }
 
+typedef struct {
+	const char *id;
+	ssize_t amount;
+} vote_t;
+
+// Get top n ids + amounts
+int
+ksort(karma_t *karma, vote_t *votes, int n, bool reverse) {
+	int actual_n = 0;
+	int sign = reverse ? -1 : 1;
+	hash_each(karma->karma, {
+		ssize_t amount = (ssize_t)val;
+		const char *id = (const char *)key;
+		if (actual_n == 0) {
+			actual_n++;
+			votes[0].amount = amount;
+			votes[0].id = id;
+		} else if (amount * sign > votes[actual_n-1].amount * sign) {
+			// Find the index to place this vote at
+			for (int i = 0; i < actual_n; i++) {
+				if (amount * sign > votes[i].amount * sign) {
+					// Move the following votes down the list
+					for (int j = n-1; j > i; j--) {
+						votes[j] = votes[j-1];
+					}
+					// Insert our vote
+					votes[i].amount = amount;
+					votes[i].id = id;
+					if (actual_n < n) {
+						actual_n++;
+					}
+					break;
+				}
+			}
+		}
+		// printf("%s: %zd\n", id, amount);
+	});
+	return actual_n;
+}
+
 void
 command_karma(command_env_t env, int argc, char **argv) {
 	karma_t *karma = (karma_t *)env.command_module;
 	if (argc < 2) {
 		// TODO: Give a listing of top karma
-		command_respond(env, "Usage: %s thing", argv[0]);
+		// command_respond(env, "Usage: %s thing", argv[0]);
+
+		static const int top_n = 10;
+		static const int bottom_n = 5;
+		vote_t top_ids[top_n];
+		int actual_n = ksort(karma, top_ids, top_n, false);
+		for (int i = 0; i < actual_n; i++) {
+			vote_t vote = top_ids[i];
+			if (vote.id) {
+				command_respond(env, "%s: %zd", vote.id, vote.amount);
+			} else {
+				break;
+			}
+		}
+		command_respond(env, "...");
+
+		actual_n = ksort(karma, top_ids, bottom_n, true);
+		for (int i = actual_n-1; i >= 0; i--) {
+			vote_t vote = top_ids[i];
+			if (vote.id) {
+				command_respond(env, "%s: %zd", vote.id, vote.amount);
+			} else {
+				break;
+			}
+		}
 
 		/*
 		hash_each(karma->karma, {
