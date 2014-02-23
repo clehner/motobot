@@ -9,6 +9,7 @@ Based on [rochako](https://github.com/rochack/rochako)
 - Connects to IRC
 - Responds using [markov chains](https://github.com/clehner/chains)
 - Reads and writes channel activity to a log file
+- Keeps track of karma, and allows querying it
 
 # Installation
 - Get dependencies
@@ -36,4 +37,3 @@ vi config.ini
 - Upload channel activity to couchdb
 - /clone - multiple connections and derivative corpuses
 - /join - move into other rooms
-- /karma
