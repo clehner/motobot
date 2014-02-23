@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <string.h>
 #include "command.h"
 
@@ -21,20 +22,17 @@ named_handler_t command_handlers[] = {
 void
 command_help(command_env_t env, int argc, char **argv) {
 	char resp[256];
-	strcpy(resp, "Commands: ");
+	resp[0] = '\0';
 	for (int i = 0; command_handlers[i].name; i++) {
 		if (i > 0) strcat(resp, ", ");
 		strcat(resp, command_handlers[i].name);
 	}
-	command_respond(env, resp);
+	command_respond(env, "Commands: %s", resp);
 }
 
 void
 command_unknown(command_env_t env, int argc, char **argv) {
-	char response[128];
-	sprintf(response, "Unknown command %s", argv[0]);
-	response[127] = 0;
-	command_respond(env, response);
+	command_respond(env, "Unknown command %s", argv[0]);
 }
 
 // Parse a message into handler function and argument string,
@@ -71,7 +69,12 @@ command_exec(command_env_t env, const char *message) {
 }
 
 void
-command_respond(command_env_t env, const char *resp) {
-	bot_send(env.module->bot, env.module, env.from_module, env.channel, resp);
+command_respond(command_env_t env, const char *fmt, ...) {
+	char buf[256];
+	va_list ap;
+	va_start(ap, fmt);
+	vsnprintf(buf, sizeof buf, fmt, ap);
+	va_end(ap);
+	bot_send(env.module->bot, env.module, env.from_module, env.channel, buf);
 }
 

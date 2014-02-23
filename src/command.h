@@ -22,7 +22,7 @@ int
 command_exec(command_env_t env, const char *message);
 
 void
-command_respond(command_env_t env, const char *resp);
+command_respond(command_env_t env, const char *resp, ...);
 
 #endif /* COMMAND_H */
 
