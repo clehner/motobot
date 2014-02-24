@@ -45,6 +45,8 @@ struct channel {
 
 typedef struct channel channel_t;
 
+static const char me_prefix[] = "/me ";
+
 // Linked-list of module instances
 // This is used to map irc_session to irc module
 // because ircclient doesn't let us store arbitrary data in the irc_session_t
@@ -204,9 +206,15 @@ event_ctcp_action(irc_session_t *session, const char *event, const char *origin,
 		const char **params, unsigned int count) {
 	const char *channel = params[0];
 	const char *message = params[1];
-	if (debug) {
-		printf("[%s] * <%s> %s\n", channel, origin, message);
-	}
+	printf("[%s] * %s %s\n", channel, origin, message);
+	if (!message) return;
+	irc_t *irc = get_module(session);
+
+	// Handle action as a message /me ...
+	char me_message[256];
+	strcpy(me_message, me_prefix);
+	strncat(me_message, message, sizeof(me_message) - sizeof(me_prefix));
+	bot_on_msg(irc->module.bot, &irc->module, channel, origin, me_message);
 }
 
 static void
@@ -328,11 +336,22 @@ static void
 send(module_t *module, const char *channel, const char *message) {
 	irc_t *irc = (irc_t *)module;
 
-	printf("[%s] <%s> %s\n", channel, irc->current_nick, message);
+	if (strncmp(message, me_prefix, strlen(me_prefix)) == 0) {
+		// Transmit an action
+		printf("[%s] * %s %s\n", channel, irc->current_nick, message);
 
-	if (irc_cmd_msg(irc->session, channel, message)) {
-		fprintf(stderr, "irc: %s\n", irc_strerror(irc_errno(irc->session)));
-		return;
+		if (irc_cmd_me(irc->session, channel, message + strlen(me_prefix))) {
+			fprintf(stderr, "irc: %s\n", irc_strerror(irc_errno(irc->session)));
+			return;
+		}
+	} else {
+		// Send a regular message
+		printf("[%s] <%s> %s\n", channel, irc->current_nick, message);
+
+		if (irc_cmd_msg(irc->session, channel, message)) {
+			fprintf(stderr, "irc: %s\n", irc_strerror(irc_errno(irc->session)));
+			return;
+		}
 	}
 
 	bot_on_read_log(module->bot, irc->current_nick, message);
