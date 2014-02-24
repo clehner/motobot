@@ -54,28 +54,42 @@ generate_response(conversation_t *conv, module_t *from_module,
 	// If we have an empty response, try again
 	} while (response[0] == '\0' && tries < 5);
 
-	// Remove self pings
+	// Transform self-addressment
 	if (strncmp(from_module->name, response, name_len) == 0) {
 		int msg_len = strlen(response);
-		// Skip optional ':'
+
+		// Remove self ping
 		if (response[name_len] == ':') {
 			name_len++;
-		}
-		// Require space or end of response
-		if (response[name_len] == ' ' || response[name_len] == '\0') {
+			// Require space or end of response
+			if (response[name_len] == ' ' || response[name_len] == '\0') {
+				// Skip spaces
+				while (response[name_len] == ' ') {
+					name_len++;
+				}
+				for (int i = name_len; i <= msg_len; i++) {
+					response[i-name_len] = response[i];
+				}
+				// If we've shortened the response to nothing,
+				// change it to ping the sender
+				if (response[0] == '\0') {
+					strncpy(response, sender, max_response_len - 2);
+					strcat(response, ":");
+				}
+			}
+
+		// Turn me statement into /me action
+		} else if (response[name_len] == ' ') {
+			static const char *me_prefix = "/me ";
 			// Skip spaces
-			while (response[name_len] == ' ') {
+			do {
 				name_len++;
-			}
-			for (int i = name_len; i <= msg_len; i++) {
-				response[i-name_len] = response[i];
-			}
-			// If we've shortened the response to nothing,
-			// change it to ping the sender
-			if (response[0] == '\0') {
-				strncpy(response, sender, max_response_len - 2);
-				strcat(response, ":");
-			}
+			} while (response[name_len] == ' ');
+			// Replace name with /me
+			char tmp_response[MAX_LINE_LENGTH];
+			strcpy(tmp_response, &response[name_len]);
+			strcpy(response, me_prefix);
+			strcat(response, tmp_response);
 		}
 	}
 
