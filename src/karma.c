@@ -13,6 +13,7 @@
 struct karma {
 	module_t module;
 	hash_t *karma;
+	bool leaderboard_enabled;
 };
 
 #define DELIMETERS " \n\r\t"
@@ -162,42 +163,42 @@ ksort(karma_t *karma, vote_t *votes, int n, bool reverse) {
 	return actual_n;
 }
 
+static void
+karma_listing(karma_t *karma, command_env_t env) {
+	static const int top_n = 10;
+	static const int bottom_n = 5;
+	vote_t top_ids[top_n];
+	int actual_n = ksort(karma, top_ids, top_n, false);
+	for (int i = 0; i < actual_n; i++) {
+		vote_t vote = top_ids[i];
+		if (vote.id) {
+			command_respond(env, "%s: %zd", vote.id, vote.amount);
+		} else {
+			break;
+		}
+	}
+	command_respond(env, "...");
+
+	actual_n = ksort(karma, top_ids, bottom_n, true);
+	for (int i = actual_n-1; i >= 0; i--) {
+		vote_t vote = top_ids[i];
+		if (vote.id) {
+			command_respond(env, "%s: %zd", vote.id, vote.amount);
+		} else {
+			break;
+		}
+	}
+}
+
 void
 command_karma(command_env_t env, int argc, char **argv) {
 	karma_t *karma = (karma_t *)env.command_module;
 	if (argc < 2) {
-		// TODO: Give a listing of top karma
-		// command_respond(env, "Usage: %s thing", argv[0]);
-
-		static const int top_n = 10;
-		static const int bottom_n = 5;
-		vote_t top_ids[top_n];
-		int actual_n = ksort(karma, top_ids, top_n, false);
-		for (int i = 0; i < actual_n; i++) {
-			vote_t vote = top_ids[i];
-			if (vote.id) {
-				command_respond(env, "%s: %zd", vote.id, vote.amount);
-			} else {
-				break;
-			}
+		if (karma->leaderboard_enabled) {
+			karma_listing(karma, env);
+		} else {
+			command_respond(env, "Usage: %s thing", argv[0]);
 		}
-		command_respond(env, "...");
-
-		actual_n = ksort(karma, top_ids, bottom_n, true);
-		for (int i = actual_n-1; i >= 0; i--) {
-			vote_t vote = top_ids[i];
-			if (vote.id) {
-				command_respond(env, "%s: %zd", vote.id, vote.amount);
-			} else {
-				break;
-			}
-		}
-
-		/*
-		hash_each(karma->karma, {
-			printf("%s: %zd\n", (char *)key, (ssize_t)val);
-		});
-		*/
 		return;
 	}
 
@@ -205,6 +206,20 @@ command_karma(command_env_t env, int argc, char **argv) {
 	// Cast void* to signed int using ssize_t
 	ssize_t amount = (ssize_t)hash_get(karma->karma, id);
 	command_respond(env, "%s: %d", id, amount);
+}
+
+static void
+config(module_t *module, const char *name, const char *value) {
+	karma_t *karma = (karma_t *)module;
+	if (strcmp(name, "leaderboard") == 0) {
+		if (strcmp(value, "yes") == 0) {
+			karma->leaderboard_enabled = true;
+		} else if (strcmp(value, "no") == 0) {
+			karma->leaderboard_enabled = false;
+		} else {
+			fprintf(stderr, "leaderboard option should be yes or no)\n");
+		}
+	}
 }
 
 static command_t commands[] = {
@@ -223,10 +238,12 @@ karma_new() {
 	compile_regexes();
 
 	karma->module.type = "karma";
+	karma->module.config = config;
 	karma->module.on_msg = on_msg;
 	karma->module.on_read_log = on_read_log;
 	karma->module.commands = commands;
 	karma->karma = hash_new();
+	karma->leaderboard_enabled = 0;
 
 	return (module_t *)karma;
 }
