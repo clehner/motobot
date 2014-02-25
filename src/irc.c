@@ -337,10 +337,11 @@ send(module_t *module, const char *channel, const char *message) {
 	irc_t *irc = (irc_t *)module;
 
 	if (strncmp(message, me_prefix, strlen(me_prefix)) == 0) {
+		const char *action = message + strlen(me_prefix);
 		// Transmit an action
-		printf("[%s] * %s %s\n", channel, irc->current_nick, message);
+		printf("[%s] * %s %s\n", channel, irc->current_nick, action);
 
-		if (irc_cmd_me(irc->session, channel, message + strlen(me_prefix))) {
+		if (irc_cmd_me(irc->session, channel, action)) {
 			fprintf(stderr, "irc: %s\n", irc_strerror(irc_errno(irc->session)));
 			return;
 		}
