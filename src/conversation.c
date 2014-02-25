@@ -18,28 +18,30 @@ generate_response(conversation_t *conv, module_t *from_module,
 		size_t max_response_len) {
 	size_t name_len = from_module->name ? strlen(from_module->name) : 0;
 
-	// Message must start with our nick for us to consider responding to it
-	if (strncmp(from_module->name, message, name_len)) {
+	// For us to respond to a message, it must contain our nick
+	// not followed by a letter/number/_-
+	char *name_start = strstr(message, from_module->name);
+	if (!name_start) {
+		return 0;
+	}
+	char name_after = name_start[name_len];
+	if (name_after == '_' || name_after == '-'
+			|| (name_after >= 'a' && name_after <= 'z')
+			|| (name_after >= 'A' && name_after <= 'Z')
+			|| (name_after >= '0' && name_after <= '9')) {
 		return 0;
 	}
 
-	// Skip the initial nick prefix
-	message += name_len;
-
-	// Read ':' so that message must start with 'nick:'
-	if (message[0] != ':') {
-		return 0;
-	}
-
-	message++;
-	// Skip spaces
-	while(message[0] == ' ') {
-		message++;
-	}
-
-	// Ignore commands
-	if (message[0] == '/') {
-		return 0;
+	// Ignore commands (messages of the form "mynick: /")
+	if (message == name_start && message[name_len] == ':') {
+		char *after = name_start + name_len + 1;
+		// Skip spaces
+		while (*after == ' ') {
+			after++;
+		}
+		if (*after == '/') {
+			return 0;
+		}
 	}
 
 	int tries = 0;
