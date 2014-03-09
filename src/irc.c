@@ -284,6 +284,7 @@ config(module_t *module, const char *name, const char *value) {
 	} else if (strcmp(name, "nick") == 0) {
 		irc->nick = strdup(value);
 		irc->current_nick = strdup(value);
+		irc->module.name = irc->current_nick;
 	} else if (strcmp(name, "username") == 0) {
 		irc->username = strdup(value);
 	} else if (strcmp(name, "realname") == 0) {
