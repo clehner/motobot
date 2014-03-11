@@ -87,7 +87,7 @@ bot_send(bot_t *bot, module_t *from_module, module_t *to_module,
 		} else if (module == to_module) {
 			if (module->send)
 				(*module->send)(module, channel, message);
-		} else if (module->on_msg) {
+		} else if (from_module->name) {
 			if (module->on_msg)
 				(*module->on_msg)(module, from_module, channel,
 						to_module->name, message);

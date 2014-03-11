@@ -137,7 +137,7 @@ commands_new() {
 		return NULL;
 	}
 
-	module->name = "cmd";
+	module->name = NULL;
 	module->type = "commands";
 	module->on_msg = on_msg;
 	// module->on_privmsg = on_privmsg;
