@@ -1,5 +1,7 @@
+#define _GNU_SOURCE
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
 #include "module.h"
 #include "bot.h"
@@ -8,14 +10,40 @@
 
 struct conversation {
 	module_t module;
+	bool polite_mode;
 	struct markov_model *model;
 };
+
+// Filter acceptable responses
+bool
+is_response_acceptable(conversation_t *conv, module_t *module,
+		const char *channel, const char *response) {
+	if (response[0] == '\0') return false;
+
+	// Unless in polite mode, anything goes
+	if (!conv->polite_mode) return true;
+
+	//printf("Checking \"%s\"\n", response);
+
+	// If someone else is in the room, don't mention them
+	nick_t *nicks = (module->get_nicks)(module, channel);
+	for (nick_t *nick = nicks; nick; nick = nick->next) {
+		if (nick->name && strcasestr(response, nick->name)) {
+			printf("Mentioned nick %s!\n", nick->name);
+			return false;
+		}
+	}
+
+	// TODO: don't ping nicks not in the room
+
+	return true;
+}
 
 // Generate a response to be sent back
 static int
 generate_response(conversation_t *conv, module_t *from_module,
-		const char *sender, const char *message, char *response,
-		size_t max_response_len) {
+		const char *channel, const char *sender, const char *message,
+		char *response, size_t max_response_len) {
 	size_t name_len = from_module->name ? strlen(from_module->name) : 0;
 
 	// For us to respond to a message, it must contain our nick
@@ -45,6 +73,7 @@ generate_response(conversation_t *conv, module_t *from_module,
 	}
 
 	int tries = 0;
+	static const int max_tries = 10;
 	do {
 		tries++;
 		// Generate response before learning
@@ -53,8 +82,9 @@ generate_response(conversation_t *conv, module_t *from_module,
 			return 0;
 		}
 
-	// If we have an empty response, try again
-	} while (response[0] == '\0' && tries < 5);
+	// If we have an unacceptable response, try again
+	} while (tries < max_tries &&
+		!is_response_acceptable(conv, from_module, channel, response));
 
 	// Transform self-addressment
 	if (strncmp(from_module->name, response, name_len) == 0) {
@@ -99,12 +129,27 @@ generate_response(conversation_t *conv, module_t *from_module,
 }
 
 static void
+config(module_t *module, const char *name, const char *value) {
+	conversation_t *conv = (conversation_t *)module;
+
+	if (strcmp(name, "polite") == 0) {
+		if (strcmp(value, "yes") == 0) {
+			conv->polite_mode = true;
+		} else if (strcmp(value, "no") == 0) {
+			conv->polite_mode = false;
+		} else {
+			fprintf(stderr, "Polite mode '%s' should be yes or no)\n", value);
+		}
+	}
+}
+
+static void
 on_msg(module_t *module, module_t *from_module, const char *channel,
 		const char *sender, const char *message) {
 	conversation_t *conv = (conversation_t *)module;
 	char response[MAX_LINE_LENGTH];
 
-	if (generate_response(conv, from_module, sender, message,
+	if (generate_response(conv, from_module, channel, sender, message,
 				(char *)&response, sizeof(response))) {
 		// Send response to channel
 		bot_send(module->bot, module, from_module, channel, response);
@@ -149,9 +194,11 @@ conversation_new() {
 
 	conv->module.type = "conversation";
 	conv->module.name = "???";
+	conv->module.config = config;
 	conv->module.on_msg = on_msg;
 	conv->module.on_privmsg = on_privmsg;
 	conv->module.on_read_log = on_read_log;
+	conv->polite_mode = false;
 	conv->model = mm_new();
 
 	return (module_t *)conv;

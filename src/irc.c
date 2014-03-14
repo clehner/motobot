@@ -3,6 +3,7 @@
  * Copyright (c) 2014 Charles Lehner
  */
 
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <string.h>
 #include "libircclient/libircclient.h"
@@ -41,6 +42,7 @@ struct irc {
 struct channel {
 	const char *name;
 	struct channel *next;
+	struct nick *nicks;
 };
 
 typedef struct channel channel_t;
@@ -51,6 +53,15 @@ static const char me_prefix[] = "/me ";
 // This is used to map irc_session to irc module
 // because ircclient doesn't let us store arbitrary data in the irc_session_t
 static irc_t *modules = NULL;
+
+char *my_strdup(const char *s) {
+	size_t len = strlen(s) + 1;
+    char *p = malloc(len);
+    if(p) strncpy(p, s, len);
+    return p;
+}
+char *my_strdup(const char *s);
+#define strdup(x) my_strdup(x)
 
 // Get the next module in the linked list of created modules
 irc_t *
@@ -63,14 +74,62 @@ get_module(irc_session_t *session) {
 	return NULL;
 }
 
-char *my_strdup(const char *s) {
-	size_t len = strlen(s) + 1;
-    char *p = malloc(len);
-    if(p) strncpy(p, s, len);
-    return p;
+channel_t *
+get_channel(irc_t *irc, const char *channel_name) {
+	if (!channel_name) return NULL;
+	for (channel_t *channel = irc->channels; channel; channel = channel->next) {
+		if (channel->name && !strcmp(channel->name, channel_name)) {
+			return channel;
+		}
+	}
+	return NULL;
 }
-char *my_strdup(const char *s);
-#define strdup(x) my_strdup(x)
+
+void
+channel_add_nick(channel_t *channel, const char *name) {
+	nick_t *nick = malloc(sizeof(nick_t));
+	if (!nick) return;
+	nick->name = strdup(name);
+	nick->next = channel->nicks;
+	channel->nicks = nick;
+	//printf("Adding nick \"%s\" to channel \"%s\"\n", name, channel->name);
+}
+
+void
+channel_remove_nick(channel_t *channel, const char *name) {
+	printf("Removing nick \"%s\" from channel \"%s\"\n", name, channel->name);
+	if (!name) return;
+	nick_t *prev_nick = channel->nicks;
+	if (!prev_nick) return;
+	if (prev_nick->name && !strcmp(prev_nick->name, name)) {
+		channel->nicks = NULL;
+		free(prev_nick->name);
+		free(prev_nick);
+		return;
+	}
+	for (nick_t *nick = prev_nick->next; nick; nick = nick->next) {
+		if (nick->name && !strcmp(nick->name, name)) {
+			prev_nick->next = nick->next;
+			free(nick->name);
+			free(nick);
+			return;
+		}
+	}
+	fprintf(stderr, "Unable to remove nick \"%s\"\n", name);
+}
+
+/*
+int
+channel_contains_nick(channel_t *channel, const char *name) {
+	if (!name) return 0;
+	for (nick_t *nick = channel->nicks; nick; nick = nick->next) {
+		if (nick->name && !strcmp(nick->name, name)) {
+			return 1;
+		}
+	}
+	return 0;
+}
+*/
 
 void
 print_array(const char *array[], int n) {
@@ -112,13 +171,31 @@ event_numeric(irc_session_t *session, unsigned int event, const char *origin,
 		case LIBIRC_RFC_RPL_ENDOFMOTD:
 			break;
 		case LIBIRC_RFC_RPL_NAMREPLY:
-			/*
-			if (count > 1) {
-				printf("[%s] NAMREPLY: ", origin);
-				print_array(params, count);
-				nick, thingy, channel, member member2...
+			if (count < 4) break;
+			irc_t *irc = get_module(session);
+			//printf("[%s] NAMREPLY (%u): ", origin, count);
+			//print_array(params, count);
+			//nick, thingy, channel, member member2...
+			const char *channel_name = params[2];
+			const char *members = params[3];
+			char members_copy[256];
+			channel_t *channel = get_channel(irc, channel_name);
+			strncpy(members_copy, members, sizeof(members_copy));
+			printf("[%s] Members of %s: %s\n", origin, channel_name, members);
+
+			// Add each nick to the list
+			// ignore nick prefixes
+			static const char *delimeters = " +@";
+			for (const char *nick = strtok(members_copy, delimeters);
+				nick;
+				nick = strtok(NULL, delimeters)) {
+
+				// Don't add outself
+				if (strcasecmp(nick, irc->current_nick)) {
+					channel_add_nick(channel, nick);
+				}
 			}
-			*/
+
 		case LIBIRC_RFC_RPL_ENDOFNAMES:
 			break;
 
@@ -243,6 +320,54 @@ event_nick(irc_session_t *session, const char *event, const char *old_nick,
 }
 
 static void
+event_join(irc_session_t *session, const char *event, const char *nick,
+		const char **params, unsigned int count) {
+	const char *channel_name = params[0];
+	if (count < 1) return;
+	irc_t *irc = get_module(session);
+	if (irc->current_nick && !strcasecmp(irc->current_nick, nick)) {
+		// so we joined
+		// good for us
+	} else {
+		// someone else joined
+		if (debug) {
+			printf("Joined (%s): %s\n", channel_name, nick);
+		}
+
+		// Update our internal list of members of the channel
+		channel_t *channel = get_channel(irc, channel_name);
+		channel_add_nick(channel, nick);
+	}
+}
+
+static void
+event_part(irc_session_t *session, const char *event, const char *nick,
+		const char **params, unsigned int count) {
+	const char *channel_name = params[0];
+	if (count < 1) return;
+	irc_t *irc = get_module(session);
+	if (irc->current_nick && strcmp(irc->current_nick, nick)) {
+		// we left
+	} else {
+		// someone else left
+		if (debug) {
+			printf("Parted (%s): %s\n", channel_name, nick);
+		}
+
+		// Update our internal list of members of the channel
+		channel_t *channel = get_channel(irc, channel_name);
+		channel_remove_nick(channel, nick);
+	}
+}
+
+nick_t *
+get_nicks(module_t *module, const char *channel_name) {
+	irc_t *irc = (irc_t *)module;
+	channel_t *channel = get_channel(irc, channel_name);
+	return channel ? channel->nicks : NULL;
+}
+
+static void
 config(module_t *module, const char *name, const char *value) {
 	irc_t *irc = (irc_t *)module;
 
@@ -290,9 +415,10 @@ config(module_t *module, const char *name, const char *value) {
 
 	} else if (strcmp(name, "channel") == 0) {
 		// Add channel to the linked list
-		channel_t *channel = malloc(sizeof(channel));
+		channel_t *channel = malloc(sizeof(channel_t));
 		channel->name = strdup(value);
 		channel->next = irc->channels;
+		channel->nicks = NULL;
 		irc->channels = channel;
 	}
 }
@@ -300,11 +426,11 @@ config(module_t *module, const char *name, const char *value) {
 static int
 module_connect(module_t *module) {
 	irc_t *irc = (irc_t *)module;
-	if (debug) {
-		printf("Connecting to server: %s, port: %u\n",
-			&irc->server[irc->ssl ? -1 : 0],
-			irc->port);
-	}
+
+	printf("Connecting to server: %s, port: %u\n",
+		&irc->server[irc->ssl ? -1 : 0],
+		irc->port);
+
 	if ((irc->ipv6 ? irc_connect6 : irc_connect)
 			(irc->session,
 			 &irc->server[irc->ssl ? -1 : 0],
@@ -364,6 +490,9 @@ irc_callbacks_t callbacks = {
 	.event_channel = event_channel,
 	.event_privmsg = event_privmsg,
 	.event_nick = event_nick,
+	.event_join = event_join,
+	.event_part = event_part,
+	//.event_ctcp_req = event_ctcp_req,
 	.event_ctcp_action = event_ctcp_action
 };
 
@@ -383,6 +512,7 @@ irc_new() {
 	irc->module.process_select_descriptors = process_select;
 	irc->module.add_select_descriptors = add_select;
 	irc->module.send = send;
+	irc->module.get_nicks = get_nicks;
 
 	irc->server = "";
 	irc->ssl = 0;

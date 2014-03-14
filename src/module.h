@@ -8,6 +8,13 @@
 
 #include <sys/select.h>
 
+struct nick {
+	char *name;
+	struct nick *next;
+};
+
+typedef struct nick nick_t;
+
 typedef struct module module_t;
 
 struct module {
@@ -24,6 +31,7 @@ struct module {
 	int (*process_select_descriptors) (module_t *module, fd_set *in_set, fd_set *out_set);
 	int (*add_select_descriptors) (module_t *module, fd_set *in_set, fd_set *out_set, int *maxfd);
 	void (*send) (module_t *module, const char *channel, const char *message);
+	nick_t * (*get_nicks) (module_t *module, const char *channel);
 
 	// Callbacks
 	void (*on_msg) (module_t *module, module_t *from_module, const char *channel,
