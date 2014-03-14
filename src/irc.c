@@ -236,11 +236,9 @@ event_nick(irc_session_t *session, const char *event, const char *old_nick,
 		if (debug) {
 			printf("Nick changed: %s\n", new_nick);
 		}
-		/*
-		if (irc_cmd_nick(session, irc->realname)) {
+		if (irc_cmd_nick(session, irc->nick)) {
 			fprintf(stderr, "irc: %s\n", irc_strerror(irc_errno(irc->session)));
 		}
-		*/
 	}
 }
 
