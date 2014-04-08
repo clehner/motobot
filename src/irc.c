@@ -75,6 +75,18 @@ get_module(irc_session_t *session) {
 }
 
 channel_t *
+add_channel(irc_t *irc, const char *channel_name) {
+	if (!channel_name) return NULL;
+	// Add channel to the linked list
+	channel_t *channel = malloc(sizeof(channel_t));
+	channel->name = strdup(channel_name);
+	channel->next = irc->channels;
+	channel->nicks = NULL;
+	irc->channels = channel;
+	return channel;
+}
+
+channel_t *
 get_channel(irc_t *irc, const char *channel_name) {
 	if (!channel_name) return NULL;
 	for (channel_t *channel = irc->channels; channel; channel = channel->next) {
@@ -180,6 +192,10 @@ event_numeric(irc_session_t *session, unsigned int event, const char *origin,
 			const char *members = params[3];
 			char members_copy[256];
 			channel_t *channel = get_channel(irc, channel_name);
+			if (!channel) {
+				// maybe the server joined us to a channel
+				channel = add_channel(irc, channel_name);
+			}
 			strncpy(members_copy, members, sizeof(members_copy));
 			printf("[%s] Members of %s: %s\n", origin, channel_name, members);
 
@@ -414,12 +430,7 @@ config(module_t *module, const char *name, const char *value) {
 		irc->realname = strdup(value);
 
 	} else if (strcmp(name, "channel") == 0) {
-		// Add channel to the linked list
-		channel_t *channel = malloc(sizeof(channel_t));
-		channel->name = strdup(value);
-		channel->next = irc->channels;
-		channel->nicks = NULL;
-		irc->channels = channel;
+		add_channel(irc, value);
 	}
 }
 
