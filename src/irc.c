@@ -109,7 +109,7 @@ channel_add_nick(channel_t *channel, const char *name) {
 
 void
 channel_remove_nick(channel_t *channel, const char *name) {
-	printf("Removing nick \"%s\" from channel \"%s\"\n", name, channel->name);
+	//printf("Removing nick \"%s\" from channel \"%s\"\n", name, channel->name);
 	if (!name) return;
 	nick_t *prev_nick = channel->nicks;
 	if (!prev_nick) return;
@@ -362,7 +362,7 @@ event_part(irc_session_t *session, const char *event, const char *nick,
 	const char *channel_name = params[0];
 	if (count < 1) return;
 	irc_t *irc = get_module(session);
-	if (irc->current_nick && strcmp(irc->current_nick, nick)) {
+	if (irc->current_nick && !strcmp(irc->current_nick, nick)) {
 		// we left
 	} else {
 		// someone else left
