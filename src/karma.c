@@ -59,7 +59,7 @@ process_message(karma_t *karma, const char *message, command_env_t *env,
 	int error;
 	// We use ssize_t for votes because it is signed and the size of a void*,
 	// which hash.h expects as a value
-	ssize_t votes;
+	ssize_t votes, total;
 
 	hash_t *table = karma->karma;
 	strncpy(message_copy, message, sizeof message_copy);
@@ -93,6 +93,9 @@ process_message(karma_t *karma, const char *message, command_env_t *env,
 				votes -= (matches[0].rm_eo - matches[0].rm_so) / 2;
 			}
 
+			// Get the new total vote amount
+			total = votes + (ssize_t)hash_get(table, id);
+
 			// Update the hashtable with the count
 			if (votes) {
 				// if (hash_has(table, id)) {
@@ -113,12 +116,12 @@ process_message(karma_t *karma, const char *message, command_env_t *env,
 					}
 					strncpy(id_copy, id, id_len+1);
 				}
-				ssize_t total = votes + (ssize_t)hash_get(table, id);
 				hash_set(table, id_copy, (void *)total);
-				// Pass the vote callback to the parent
-				if (on_vote && env) {
-					on_vote(env, (vote_t){id, total}, votes);
-				}
+			}
+
+			// Pass the vote callback to the parent
+			if (on_vote && env) {
+				on_vote(env, (vote_t){id, total}, votes);
 			}
 		}
 	}
