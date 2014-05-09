@@ -263,13 +263,13 @@ event_channel(irc_session_t *session, const char *event, const char *origin,
 
 		// This is a played-back message.
 		// Skip the timestamp (first word)
-		message = strchr(message, ' ');
-		if (!message) {
-			fprintf(stderr, "Broken played-back message\n");
+		char *message2 = strchr(message, ' ');
+		if (!message2) {
+			fprintf(stderr, "Broken played-back message: %s\n", message);
 			return;
 		}
 		// Skip the space after the timestamp
-		message++;
+		message = message2 + 1;
 	}
 
 	// Process message
