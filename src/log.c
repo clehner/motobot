@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
 #include "bot.h"
@@ -11,6 +12,7 @@ struct log {
 	char post_url[256];
 	char filename[256];
 	FILE *file;
+	bool autoflush;
 };
 
 static int
@@ -21,6 +23,9 @@ log_message(log_t *log, const char *sender, const char *message) {
 	}
 
 	fprintf(log->file, "%s %s\n", sender, message);
+	if (log->autoflush) {
+		fflush(log->file);
+	}
 	return 1;
 }
 
@@ -91,6 +96,14 @@ config(module_t *module, const char *name, const char *value) {
 		strncpy(log->filename, value, sizeof(log->filename));
 	} else if (strcmp(name, "post") == 0) {
 		strncpy(log->post_url, value, sizeof(log->post_url));
+	} else if (strcmp(name, "autoflush") == 0) {
+		if (strcmp(value, "yes") == 0) {
+			log->autoflush = true;
+		} else if (strcmp(value, "no") == 0) {
+			log->autoflush = false;
+		} else {
+			fprintf(stderr, "Autoflush '%s' should be yes or no)\n", value);
+		}
 	}
 }
 
