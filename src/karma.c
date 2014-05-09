@@ -16,6 +16,15 @@ struct karma {
 	bool leaderboard_enabled;
 };
 
+// karma leaderboard unit
+typedef struct {
+	const char *id;
+	ssize_t amount;
+} vote_t;
+
+typedef void
+(*on_vote_fn_t) (command_env_t *env, vote_t vote, ssize_t delta);
+
 #define DELIMETERS " \n\r\t"
 // no non-greedy star in POSIX regex
 #define R_ID "^\\([^\\(++\\)\\(--\\)]\\+\\)[\\(++\\)\\(--\\)]\\{2,\\}"
@@ -40,7 +49,8 @@ compile_regexes() {
 
 // Scan a message for ++/-- and store the results in the karma hashtable
 static void
-process_message(karma_t *karma, const char *message) {
+process_message(karma_t *karma, const char *message, command_env_t *env,
+		on_vote_fn_t on_vote) {
 	char message_copy[512];
 	char id[64];
 	char *id_copy;
@@ -103,30 +113,45 @@ process_message(karma_t *karma, const char *message) {
 					}
 					strncpy(id_copy, id, id_len+1);
 				}
-				votes += (ssize_t)hash_get(table, id);
-				hash_set(table, id_copy, (void *)votes);
+				ssize_t total = votes + (ssize_t)hash_get(table, id);
+				hash_set(table, id_copy, (void *)total);
+				// Pass the vote callback to the parent
+				if (on_vote && env) {
+					on_vote(env, (vote_t){id, total}, votes);
+				}
 			}
 		}
 	}
 }
 
 static void
+got_vote(command_env_t *env, vote_t vote, ssize_t delta) {
+	// Repond about a thing that was up/downvoted
+	char response[512];
+	const char *direction =
+		(delta < 0) ? "down" :
+		(delta > 0) ? "up" : "side";
+	snprintf(response, sizeof(response), "%s %svoted %s (karma: %zd)", env->sender,
+			direction, vote.id, vote.amount);
+	bot_send(env->module->bot, env->module, env->from_module, env->channel,
+			response);
+}
+
+static void
 on_msg(module_t *module, module_t *from_module, const char *channel,
 		const char *sender, const char *message) {
 	karma_t *karma = (karma_t *)module;
-	process_message(karma, message);
+
+	// Process votes in the message
+	command_env_t env = {module, from_module, channel, sender, module};
+	process_message(karma, message, &env, got_vote);
 }
 
 static void
 on_read_log(module_t *module, const char *sender, const char *message) {
 	karma_t *karma = (karma_t *)module;
-	process_message(karma, message);
+	process_message(karma, message, NULL, NULL);
 }
-
-typedef struct {
-	const char *id;
-	ssize_t amount;
-} vote_t;
 
 // Get top n ids + amounts
 int
