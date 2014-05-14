@@ -59,7 +59,7 @@ process_message(karma_t *karma, const char *message, command_env_t *env,
 	int error;
 	// We use ssize_t for votes because it is signed and the size of a void*,
 	// which hash.h expects as a value
-	ssize_t votes, total;
+	ssize_t votes_up, votes_down, votes_delta, votes_total;
 
 	hash_t *table = karma->karma;
 	strncpy(message_copy, message, sizeof message_copy);
@@ -81,23 +81,24 @@ process_message(karma_t *karma, const char *message, command_env_t *env,
 			// Get the token name
 			strncpy(id, word + matches[1].rm_so, id_len);
 			id[id_len] = '\0';
-			votes = 0;
+			votes_up = votes_down = 0;
 
 			// Count the ++
 			if (!regexec(&r_plus, word, 1, matches, 0)) {
-				votes += (matches[0].rm_eo - matches[0].rm_so) / 2;
+				votes_up += (matches[0].rm_eo - matches[0].rm_so) / 2;
 			}
 
 			// Count the --
 			if (!regexec(&r_minus, word, 1, matches, 0)) {
-				votes -= (matches[0].rm_eo - matches[0].rm_so) / 2;
+				votes_down += (matches[0].rm_eo - matches[0].rm_so) / 2;
 			}
 
 			// Get the new total vote amount
-			total = votes + (ssize_t)hash_get(table, id);
+			votes_delta = votes_up - votes_down;
+			votes_total = votes_delta + (ssize_t)hash_get(table, id);
 
 			// Update the hashtable with the count
-			if (votes) {
+			if (votes_delta) {
 				// if (hash_has(table, id)) {
 				// Warning: memory leak here.
 				// Because hash_has is not working, we use hash_get to test.
@@ -116,12 +117,13 @@ process_message(karma_t *karma, const char *message, command_env_t *env,
 					}
 					strncpy(id_copy, id, id_len+1);
 				}
-				hash_set(table, id_copy, (void *)total);
+				hash_set(table, id_copy, (void *)votes_total);
 			}
 
 			// Pass the vote callback to the parent
-			if (on_vote && env) {
-				on_vote(env, (vote_t){id, total}, votes);
+			// allow side votes (upvotes canceling out downvotes)
+			if ((votes_up || votes_down) && on_vote && env) {
+				on_vote(env, (vote_t){id, votes_total}, votes_delta);
 			}
 		}
 	}
