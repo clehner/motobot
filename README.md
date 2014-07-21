@@ -33,6 +33,15 @@ vi config.ini
 ./motobot config.ini
 ```
 
+- Set up user and systemd service (optional)
+```
+sudo make install
+sudo useradd -r motobot -m -d /var/lib/motobot
+sudo cp motobot.service /etc/systemd/system/
+sudo systemctl enable motobot
+sudo systemctl start motobot
+```
+
 # Todo
 - Upload channel activity to couchdb
 - /clone - multiple connections and derivative corpuses

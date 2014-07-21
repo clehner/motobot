@@ -1,0 +1,14 @@
+[Unit]
+Description=Modular IRC Conversation Bot
+After=network.target
+
+[Service]
+User=motobot
+WorkingDirectory=/var/lib/motobot
+ExecStart=/usr/local/bin/motobot /etc/motobot/config.ini
+Type=simple
+StandardError=journal
+StandardOutput=journal
+
+[Install]
+WantedBy=multi-user.target
