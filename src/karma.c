@@ -14,6 +14,7 @@ struct karma {
 	module_t module;
 	hash_t *karma;
 	bool leaderboard_enabled;
+	bool notify_enabled;
 };
 
 // karma leaderboard unit
@@ -147,9 +148,12 @@ on_msg(module_t *module, module_t *from_module, const char *channel,
 		const char *sender, const char *message) {
 	karma_t *karma = (karma_t *)module;
 
+	// Set notification callback if enabled
+	on_vote_fn_t on_vote = karma->notify_enabled ? got_vote : NULL;
+
 	// Process votes in the message
 	command_env_t env = {module, from_module, channel, sender, module};
-	process_message(karma, message, &env, got_vote);
+	process_message(karma, message, &env, on_vote);
 }
 
 static void
@@ -250,6 +254,16 @@ config(module_t *module, const char *name, const char *value) {
 			fprintf(stderr, "leaderboard option should be yes or no)\n");
 		}
 	}
+
+	if (strcmp(name, "notify") == 0) {
+		if (strcmp(value, "yes") == 0) {
+			karma->notify_enabled = true;
+		} else if (strcmp(value, "no") == 0) {
+			karma->notify_enabled = false;
+		} else {
+			fprintf(stderr, "notify option should be yes or no)\n");
+		}
+	}
 }
 
 static command_t commands[] = {
@@ -274,6 +288,7 @@ karma_new() {
 	karma->module.commands = commands;
 	karma->karma = hash_new();
 	karma->leaderboard_enabled = 0;
+	karma->notify_enabled = 0;
 
 	return (module_t *)karma;
 }
