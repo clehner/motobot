@@ -3,11 +3,11 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <regex.h>
 #include "bot.h"
 #include "module.h"
 #include "hash/hash.h"
 #include "karma.h"
-#include "regex.h"
 #include "command.h"
 
 struct karma {
@@ -31,6 +31,8 @@ typedef void
 #define R_ID "^\\([^\\(++\\)\\(--\\)]\\+\\)[\\(++\\)\\(--\\)]\\{2,\\}"
 #define R_PLUS "\\(++\\)\\+"
 #define R_MINUS "\\(--\\)\\+"
+
+#define MIN(x,y) ((x)<(y)?(x):(y))
 
 regex_t r_id, r_plus, r_minus;
 bool regexes_compiled = false;
@@ -80,7 +82,7 @@ process_message(karma_t *karma, const char *message, command_env_t *env,
 		} else {
 			size_t id_len = matches[1].rm_eo - matches[1].rm_so;
 			// Get the token name
-			strncpy(id, word + matches[1].rm_so, id_len);
+			strncpy(id, word + matches[1].rm_so, MIN(sizeof(id), id_len));
 			id[id_len] = '\0';
 			votes_up = votes_down = 0;
 
