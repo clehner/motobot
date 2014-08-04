@@ -10,6 +10,7 @@ Based on [rochako](https://github.com/rochack/rochako)
 - Responds using [markov chains](https://github.com/clehner/chains)
 - Reads and writes channel activity to a log file
 - Keeps track of karma, and allows querying it
+- Report user ping times (this is satire)
 
 # Installation
 - Get dependencies
