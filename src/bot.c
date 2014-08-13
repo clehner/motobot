@@ -5,6 +5,35 @@
 #include "bot.h"
 #include "module.h"
 
+int
+bot_config_set(bot_t* bot, const char* section, const char* name,
+		const char* value) {
+	module_t *module;
+
+	for (module = bot->modules; module; module = module->next) {
+		if (strcmp(section, module->type) == 0) {
+			// Found the module
+			break;
+		}
+	}
+	if (module == NULL) {
+		// No matching module found.
+		// Create the module.
+		module = module_new(section);
+		if (!module) {
+			fprintf(stderr, "Unable to create module '%s'\n", section);
+			return 0;
+		}
+		// Add the module
+		bot_add_module(bot, module);
+	}
+
+	// Configure the module
+	if (module->config)
+		(*module->config)(module, name, value);
+	return 1;
+}
+
 void
 bot_add_module(bot_t *bot, module_t *module) {
 	module->next = bot->modules;

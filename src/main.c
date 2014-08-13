@@ -11,30 +11,7 @@ static bot_t bot = {0};
 static int
 bot_config_handler(void* obj, const char* section, const char* name,
 		const char* value) {
-	module_t *module = bot.modules;
-
-	if (!module || strcmp(section, bot.modules->type)) {
-		// Add new module of given type
-		/*
-		module_type_t *module_type = module_get_type(section);
-		if (!module_type) {
-			fprintf(stderr, "Unknown module type '%s'\n", section);
-			return 0;
-		}
-		*/
-		module = module_new(section);
-		if (!module) {
-			fprintf(stderr, "Unable to create module '%s'\n", section);
-			return 0;
-		}
-
-		bot_add_module(&bot, module);
-	}
-
-	// Configure the module
-	if (module->config)
-		(*module->config)(module, name, value);
-	return 1;
+	return bot_config_set(&bot, section, name, value);
 }
 
 int

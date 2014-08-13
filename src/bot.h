@@ -12,7 +12,12 @@ typedef struct bot bot_t;
 
 struct bot {
 	module_t *modules;
+	const char *config_filename;
 };
+
+int
+bot_config_set(bot_t* bot, const char* section, const char* name,
+		const char* value);
 
 void
 bot_add_module(bot_t *bot, module_t* module);
