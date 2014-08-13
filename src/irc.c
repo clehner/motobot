@@ -13,6 +13,7 @@
 #include "module.h"
 #include "bot.h"
 #include "irc.h"
+#include "strdup.h"
 
 #define debug 0
 
@@ -53,15 +54,6 @@ static const char me_prefix[] = "/me ";
 // This is used to map irc_session to irc module
 // because ircclient doesn't let us store arbitrary data in the irc_session_t
 static irc_t *modules = NULL;
-
-char *my_strdup(const char *s) {
-	size_t len = strlen(s) + 1;
-    char *p = malloc(len);
-    if(p) strncpy(p, s, len);
-    return p;
-}
-char *my_strdup(const char *s);
-#define strdup(x) my_strdup(x)
 
 // Get the next module in the linked list of created modules
 irc_t *
