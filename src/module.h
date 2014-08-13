@@ -7,6 +7,7 @@
 #define MODULE_H
 
 #include <sys/select.h>
+#include <hash/hash.h>
 
 struct nick {
 	char *name;
@@ -22,6 +23,7 @@ struct module {
 	const char *name;
 	module_t *next;
 	struct bot *bot;
+	hash_t *config_values;
 
 	struct command *commands;
 

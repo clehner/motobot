@@ -5,12 +5,14 @@
 #include "inih/ini.h"
 #include "bot.h"
 #include "module.h"
+#include "strdup.h"
 
 static bot_t bot = {0};
 
 static int
 bot_config_handler(void* obj, const char* section, const char* name,
 		const char* value) {
+	bot_open_section(&bot, section);
 	return bot_config_set(&bot, section, name, value);
 }
 
@@ -20,13 +22,16 @@ main(int argc, char *argv[]) {
 	fd_set in_set, out_set;
 	int maxfd = 0;
 
+	bot_init(&bot);
+	bot.config_filename = argv[1];
+
     if (argc != 2) {
         fprintf(stderr, "Usage: %s config.ini\n", argv[0]);
         return 1;
     }
 
 	// Read and process the configuration
-    if (ini_parse(argv[1], bot_config_handler, 0) < 0) {
+    if (ini_parse(bot.config_filename, bot_config_handler, 0) < 0) {
         fprintf(stderr, "Can't load '%s'\n", argv[1]);
         return 1;
     }

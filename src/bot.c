@@ -4,34 +4,117 @@
 #include <string.h>
 #include "bot.h"
 #include "module.h"
+#include "hash/hash.h"
+#include "strdup.h"
+
+void
+bot_init(bot_t *bot) {
+	bot->modules_by_section = hash_new();
+}
+
+// Get the module corresponding to a section in the config
+module_t *
+bot_get_module(bot_t *bot, const char *section) {
+	return (module_t *)hash_get(bot->modules_by_section, (char *)section);
+}
+
+const char *
+bot_config_get(bot_t *bot, const char* section, const char* name) {
+	module_t *module = bot_get_module(bot, section);
+	return hash_get(module->config_values, (char *)name);
+}
 
 int
-bot_config_set(bot_t* bot, const char* section, const char* name,
+bot_config_set(bot_t *bot, const char *section, const char* name,
 		const char* value) {
 	module_t *module;
+	char module_type[64];
+	char *delimiter;
 
-	for (module = bot->modules; module; module = module->next) {
-		if (strcmp(section, module->type) == 0) {
-			// Found the module
-			break;
-		}
-	}
+	module = bot_get_module(bot, section);
 	if (module == NULL) {
 		// No matching module found.
 		// Create the module.
-		module = module_new(section);
+		// Strip characters after dot in section name, to allow for multiple
+		// sections of the same type.
+		strncpy(module_type, section, sizeof module_type);
+		if ((delimiter = strchr(module_type, '.'))) {
+			*delimiter = '\0';
+		}
+		module = module_new(module_type);
+		section = strdup(section);
+		hash_set(bot->modules_by_section, (char *)section, (void *)module);
+		bot_open_section(bot, section);
 		if (!module) {
-			fprintf(stderr, "Unable to create module '%s'\n", section);
+			fprintf(stderr, "Unable to create module '%s'\n", module_type);
 			return 0;
 		}
-		// Add the module
-		bot_add_module(bot, module);
+	}
+
+	// duplicate the strings so they can persist in the hashtable
+	name = strdup(name);
+	value = strdup(value);
+	// TODO: free previous names and values
+
+	// Set the value in the config hashtable
+	hash_set(module->config_values, (char *)name, (void *)value);
+
+	// Allow disabling/re-enabling modules
+	if (!strcmp("enabled", name)) {
+		if (!strcmp("yes", value)) {
+			// Add the module
+			bot_add_module(bot, module);
+		} else if (!strcmp("no", value)) {
+			bot_remove_module(bot, module);
+			// TODO: free module and completely remove it
+		}
 	}
 
 	// Configure the module
+	//printf("config (%p): %s=%s\n", module->config, name, value);
 	if (module->config)
 		(*module->config)(module, name, value);
 	return 1;
+}
+
+// Set the given section as the current last section of the config file.
+int
+bot_open_section(bot_t *bot, const char *section) {
+	if (bot->last_section && strcmp(bot->last_section, section) == 0) {
+		// section already open
+		return 0;
+	}
+	if (bot->last_section) {
+		free(bot->last_section);
+	}
+	// open section
+	bot->last_section = strdup(section);
+	return 1;
+}
+
+// Write a config value to the config file.
+// Simply append it to the end of the file, because we are lazy.
+void
+bot_config_append(bot_t *bot, const char *section, const char *key,
+		const char *value) {
+	FILE *file = fopen(bot->config_filename, "a");
+	if (!file) {
+		perror("fopen");
+		return;
+	}
+
+	if (bot_open_section(bot, section)) {
+		// Establish the desired section in the config file
+		if (fprintf(file, "\n[%s]\n", section) < 0){
+			perror("fprintf");
+		}
+	}
+
+	if (fprintf(file, "%s=%s\n", key, value) < 0) {
+		perror("fprintf");
+	}
+
+	fclose(file);
 }
 
 void

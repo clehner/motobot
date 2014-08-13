@@ -9,24 +9,31 @@
 #include "karma.h"
 #include "pinger.h"
 #include "command.h"
+#include "config.h"
 
 module_t *
 module_new(const char *type) {
+	module_t *module;
 	if (strcmp(type, "irc") == 0) {
-		return irc_new();
+		module = irc_new();
 	} else if (strcmp(type, "conversation") == 0) {
-		return conversation_new();
+		module = conversation_new();
 	} else if (strcmp(type, "pipe") == 0) {
-		return pipe_new();
+		module = pipe_new();
 	} else if (strcmp(type, "log") == 0) {
-		return log_new();
+		module = log_new();
 	} else if (strcmp(type, "karma") == 0) {
-		return karma_new();
+		module = karma_new();
 	} else if (strcmp(type, "commands") == 0) {
-		return commands_new();
+		module = commands_new();
 	} else if (strcmp(type, "pinger") == 0) {
-		return pinger_new();
+		module = pinger_new();
+	} else if (strcmp(type, "config") == 0) {
+		module = config_new();
 	} else {
 		return NULL;
 	}
+
+	module->config_values = hash_new();
+	return module;
 }

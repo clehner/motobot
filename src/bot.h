@@ -7,17 +7,36 @@
 #define BOT_H
 
 #include "module.h"
+#include "hash/hash.h"
 
 typedef struct bot bot_t;
 
 struct bot {
 	module_t *modules;
+	hash_t *modules_by_section;
 	const char *config_filename;
+	char *last_section;
 };
 
+void
+bot_init(bot_t *bot);
+
+module_t *
+bot_get_module(bot_t *bot, const char *section);
+
+const char *
+bot_config_get(bot_t *bot, const char *section, const char *name);
+
 int
-bot_config_set(bot_t* bot, const char* section, const char* name,
-		const char* value);
+bot_config_set(bot_t *bot, const char *section, const char *name,
+		const char *value);
+
+int
+bot_open_section(bot_t *bot, const char *section);
+
+void
+bot_config_append(bot_t *bot, const char *section, const char *key,
+		const char *value);
 
 void
 bot_add_module(bot_t *bot, module_t* module);

@@ -1,6 +1,6 @@
 {
 	"name": "motobot",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"repo": "clehner/motobot",
 	"description": "Modular IRC conversation bot",
 	"keywords": ["irc", "chat", "bot", "markov", "chains"],
