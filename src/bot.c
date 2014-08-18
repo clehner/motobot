@@ -21,6 +21,7 @@ bot_get_module(bot_t *bot, const char *section) {
 const char *
 bot_config_get(bot_t *bot, const char* section, const char* name) {
 	module_t *module = bot_get_module(bot, section);
+	if (!module) return NULL;
 	return hash_get(module->config_values, (char *)name);
 }
 

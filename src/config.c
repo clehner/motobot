@@ -31,11 +31,14 @@ sprint_sections(bot_t *bot) {
 }
 
 // Get a string listing the keys in the given section of the bot's config
-const char *
+char *
 sprint_keys(bot_t *bot, const char *section) {
 	static char buf[512];
 	size_t max_len = 512;
 	module_t *module = bot_get_module(bot, section);
+	if (!module) {
+		return NULL;
+	}
 	buf[0] = '\0';
 	hash_each_key(module->config_values, {
 		strncat(buf, key, max_len -= strlen(key));
@@ -86,8 +89,12 @@ command_config(command_env_t env, int argc, char **argv) {
 		command_respond(env, "Config sections: %s", sprint_sections(bot));
 	} else if (argc == 2) {
 		// Get list of keys in a config section
-		command_respond(env, "Config keys in %s: %s", argv[1],
-			sprint_keys(bot, argv[1]));
+		char *keys = sprint_keys(bot, argv[1]);
+		if (!keys) {
+			command_respond(env, "No config section named %s", argv[1]);
+		} else {
+			command_respond(env, "Config keys in %s: %s", argv[1], keys);
+		}
 	} else if (argc == 3) {
 		// Get value for a key in a config section
 		command_respond(env, "Config value for %s %s: %s", argv[1], argv[2],
