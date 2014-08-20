@@ -8,11 +8,30 @@
 #include "conversation.h"
 #include "chains/chains.h"
 
+#define ARRAYSIZE(array) (sizeof(array) / sizeof((array)[0]))
+
 struct conversation {
 	module_t module;
 	bool polite_mode;
 	struct markov_model *model;
 };
+
+const char *fail_responses[] = {
+	"I can't think of anything nice to say.",
+	"I give up",
+	"/me stares into space",
+	"/me pokes celehner",
+	"That's not funny.",
+	"yes",
+	"no"
+};
+
+// Pick a canned response if all else was too impolite
+void
+fail_response(char *response, size_t max_len) {
+	const char *resp = fail_responses[rand() % ARRAYSIZE(fail_responses)];
+	strncpy(response, resp, max_len);
+}
 
 // Filter acceptable responses
 bool
@@ -73,7 +92,7 @@ generate_response(conversation_t *conv, module_t *from_module,
 	}
 
 	int tries = 0;
-	static const int max_tries = 10;
+	static const int max_tries = 20;
 	do {
 		tries++;
 		// Generate response before learning
@@ -85,6 +104,20 @@ generate_response(conversation_t *conv, module_t *from_module,
 	// If we have an unacceptable response, try again
 	} while (tries < max_tries &&
 		!is_response_acceptable(conv, from_module, channel, response));
+
+	// If we really can't generate an acceptable response, try a response from
+	// scratch
+	if (tries >= max_tries) {
+		if (!mm_respond_and_learn(conv->model, "", response, 0)) {
+			fprintf(stderr, "Unable to respond\n");
+			return 0;
+		}
+
+		// If that's still not acceptable, make something up.
+		if (!is_response_acceptable(conv, from_module, channel, response)) {
+			fail_response(response, max_response_len);
+		}
+	}
 
 	// Transform self-addressment
 	if (strncmp(from_module->name, response, name_len) == 0) {
