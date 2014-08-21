@@ -120,6 +120,13 @@ bot_config_append(bot_t *bot, const char *section, const char *key,
 
 void
 bot_add_module(bot_t *bot, module_t *module) {
+	// make sure it's not already added
+	for (module_t *curr = bot->modules; curr; curr = curr->next) {
+		if (curr == module) {
+			return;
+		}
+	}
+
 	module->next = bot->modules;
 	bot->modules = module;
 	module->bot = bot;
