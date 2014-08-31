@@ -10,6 +10,7 @@
 #include "pinger.h"
 #include "command.h"
 #include "config.h"
+#include "todo.h"
 
 module_t *
 module_new(const char *type) {
@@ -30,6 +31,8 @@ module_new(const char *type) {
 		module = pinger_new();
 	} else if (strcmp(type, "config") == 0) {
 		module = config_new();
+	} else if (strcmp(type, "todo") == 0) {
+		module = todo_new();
 	} else {
 		return NULL;
 	}

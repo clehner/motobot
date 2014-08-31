@@ -6,7 +6,7 @@ CC     ?= cc
 SRC     = $(wildcard src/*.c)
 SRC    += $(wildcard deps/*/*.c)
 OBJ = $(SRC:.c=.o)
-CFLAGS  = -std=c99 -Ideps -Isrc
+CFLAGS  = -std=gnu99 -Ideps -Isrc
 CFLAGS += -Wall
 LDFLAGS = -lircclient
 

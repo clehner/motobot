@@ -52,4 +52,10 @@ int
 mm_respond_and_learn(struct markov_model *model, const char line[],
 	char *best_response, char learn);
 
+// utilities
+
+void
+sequence_concat(char *dest, char *sequence[], int max_len,
+		int seq_len, int direction);
+
 #endif /* CHAINS_H */
